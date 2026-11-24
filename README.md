@@ -81,7 +81,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (126 tests in
+tests starting up React Native). What is covered (129 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -143,7 +143,11 @@ tests starting up React Native). What is covered (126 tests in
   back throws "Could not save order"); and in local mode, saving and
   reading orders through AsyncStorage (generated ids, T0201/T0202,
   newest-first sorting, updating a status, a no-op for an unknown id,
-  and corrupted storage reading back as an empty list).
+  and corrupted storage reading back as an empty list). Also the
+  pickup-number retry: a 23505 (unique violation on pickup_number)
+  on the first insert retries with the next number (T0203 → T0204)
+  and saves, three 23505s in a row throws, and a non-23505 error
+  throws immediately without retrying.
 - `cart-context.test.js` — the `CartProvider` itself, driven through a
   small probe component: adding a line, merging the same drink and
   options into one line, keeping a different size on its own line,
@@ -163,13 +167,23 @@ tests starting up React Native). What is covered (126 tests in
   real native views never mount their children under Jest.
 
 Coverage (`npx jest --coverage`, files touched by tests only):
-statements 100%, lines 100%, functions 100%, branches 98.97%.
+statements 100%, lines 100%, functions 100%, branches 98.99%.
 Every file is 100% on every measure except MenuScreen, which is 100%
 except two branches (96%) — the `large` flag of its cup drawing is
 never set anywhere in the app, so those two branches cannot be reached
 without changing the app. That is the only uncovered code left, and it
 is deliberate: reaching 100% branches would mean drawing a large cup
 that no screen ever shows.
+
+The pickup number comes from the order count (`T` + 201 + count), so
+two orders placed at the same moment can both compute the same number.
+`orders.pickup_number` is UNIQUE in the database (see
+`supabase-schema.sql`), and the Supabase branch of `saveOrder()` in
+`src/orders.js` relies on that: if the insert fails with Postgres code
+23505 (unique violation), it retries with the next number, up to 3
+attempts; any other error throws immediately, and the local
+AsyncStorage path is unchanged — two orders on one device never
+collide, because they are saved one after the other.
 
 To add a new test, create a file ending in `.test.js` inside
 `src/__tests__/` and run `npm test` — Jest picks it up automatically.

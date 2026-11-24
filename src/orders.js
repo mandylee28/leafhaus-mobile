@@ -97,7 +97,7 @@ export function formatPickupNumber(count) {
   return 'T' + String(201 + count).padStart(4, '0');
 }
 
-async function nextPickupNumber() {
+async function orderCount() {
   let count = 0;
   if (isSupabaseConfigured && supabase) {
     const { count: n } = await supabase
@@ -107,47 +107,65 @@ async function nextPickupNumber() {
   } else {
     count = (await loadLocalOrders()).length;
   }
-  return formatPickupNumber(count);
+  return count;
+}
+
+async function nextPickupNumber() {
+  return formatPickupNumber(await orderCount());
 }
 
 // Saves the order draft and returns the saved order (with its database id).
 // Draft: { orderNumber, store, items, subtotal, discount, total, voucher,
 //           payment, leaves, status, time }
 export async function saveOrder(draft) {
-  const pickupNumber = await nextPickupNumber();
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('orders')
-      .insert({
-        order_number: draft.orderNumber,
-        pickup_number: pickupNumber,
-        store: draft.store,
-        subtotal: draft.subtotal,
-        discount: draft.discount,
-        total: draft.total,
-        voucher_code: draft.voucher,
-        payment: draft.payment,
-        leaves: draft.leaves,
-        status: draft.status,
-      })
-      .select('id')
-      .single();
-    if (error || !data) {
+    // Two orders placed at the same moment both count the same number of
+    // rows, so both try the same pickup number. pickup_number is UNIQUE
+    // in the database, so the second insert fails with Postgres code
+    // 23505 — retry with the next number instead of failing the order.
+    const baseCount = await orderCount();
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const pickupNumber = formatPickupNumber(baseCount + attempt);
+      const { data, error } = await supabase
+        .from('orders')
+        .insert({
+          order_number: draft.orderNumber,
+          pickup_number: pickupNumber,
+          store: draft.store,
+          subtotal: draft.subtotal,
+          discount: draft.discount,
+          total: draft.total,
+          voucher_code: draft.voucher,
+          payment: draft.payment,
+          leaves: draft.leaves,
+          status: draft.status,
+        })
+        .select('id')
+        .single();
+      if (!error && data) {
+        const items = draft.items.map((item) => ({
+          order_id: data.id,
+          name: item.name,
+          size: item.size,
+          ice: item.ice,
+          sweet: item.sweet,
+          qty: item.qty,
+          unit_price: item.unitPrice,
+        }));
+        const itemsRes = await supabase.from('order_items').insert(items);
+        if (itemsRes.error) throw itemsRes.error;
+        return { ...draft, id: data.id, pickupNumber };
+      }
+      if (error && error.code === '23505') {
+        lastError = error;
+        continue;
+      }
       throw error || new Error('Could not save order');
     }
-    const items = draft.items.map((item) => ({
-      order_id: data.id,
-      name: item.name,
-      size: item.size,
-      ice: item.ice,
-      sweet: item.sweet,
-      qty: item.qty,
-      unit_price: item.unitPrice,
-    }));
-    const itemsRes = await supabase.from('order_items').insert(items);
-    if (itemsRes.error) throw itemsRes.error;
-    return { ...draft, id: data.id, pickupNumber };
+    throw lastError;
   }
+  const pickupNumber = await nextPickupNumber();
   const order = {
     ...draft,
     id: 'ORD-' + Date.now(),
