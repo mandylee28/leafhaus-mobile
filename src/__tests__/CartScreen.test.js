@@ -8,19 +8,23 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { Alert, TouchableOpacity } from 'react-native';
 
 const mockNavigate = jest.fn();
 const mockSetQty = jest.fn();
 const mockClearCart = jest.fn();
 const mockSaveOrder = jest.fn();
+const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
 // One cart line: Jasmine Matcha Pure Tea, Regular, qty 1 (RM 11.90).
 const oneItem = [
   { drinkId: 1, size: 'Regular', ice: 'Normal Ice', sweet: 'Less Sweet', qty: 1 },
 ];
 
-// The cart contents for the current test; each test sets this before render.
+// The cart contents and the picked store for the current test;
+// each test sets these before render.
 let mockCart = [];
+let mockStore = 'Leafhaus MY Horizon Mall';
 
 // Fake navigation: the screen only navigates to Menu and Order.
 jest.mock('@react-navigation/native', () => ({
@@ -33,7 +37,7 @@ jest.mock('../cart', () => ({
     cart: mockCart,
     setQty: mockSetQty,
     clearCart: mockClearCart,
-    store: 'Leafhaus MY Horizon Mall',
+    store: mockStore,
   }),
 }));
 
@@ -60,7 +64,9 @@ beforeEach(() => {
   mockClearCart.mockClear();
   mockSaveOrder.mockClear();
   mockSaveOrder.mockResolvedValue({ id: 'ORD-1', pickupNumber: 'T0201' });
+  alertSpy.mockClear();
   mockCart = [];
+  mockStore = 'Leafhaus MY Horizon Mall';
 });
 
 describe('CartScreen', () => {
@@ -195,6 +201,76 @@ describe('CartScreen', () => {
       expect(mockSaveOrder).toHaveBeenCalledWith(
         expect.objectContaining({ payment: 'Card' })
       );
+    });
+  });
+
+  // When saving the order fails, the screen shows an alert, keeps the
+  // cart, and does not open the Order screen.
+  test('a failed order shows an alert and keeps the cart', async () => {
+    mockCart = [...oneItem];
+    mockSaveOrder.mockRejectedValueOnce(new Error('network down'));
+    render(<CartScreen />);
+    fireEvent.press(screen.getByText('Place Order · RM 11.90'));
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Could not place order',
+        'Please check your connection and try again.'
+      );
+    });
+    expect(mockClearCart).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByText('Place Order · RM 11.90')).toBeOnTheScreen();
+  });
+
+  // Placing the order with a voucher passes the voucher code to the order.
+  test('placing the order with a voucher passes the voucher code', async () => {
+    mockCart = [...oneItem];
+    render(<CartScreen />);
+    fireEvent.changeText(screen.getByPlaceholderText('Voucher code (e.g. WELCOME50)'), 'WELCOME50');
+    fireEvent.press(screen.getByText('Apply'));
+    fireEvent.press(screen.getByText('Place Order · RM 5.95'));
+    await waitFor(() => {
+      expect(mockSaveOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ voucher: 'WELCOME50', discount: 5.95, total: 5.95 })
+      );
+    });
+  });
+
+  // With no store picked, the order goes to the first store on the list.
+  test('placing the order with no store picked uses the first store', async () => {
+    mockCart = [...oneItem];
+    mockStore = null;
+    render(<CartScreen />);
+    fireEvent.press(screen.getByText('Place Order · RM 11.90'));
+    await waitFor(() => {
+      expect(mockSaveOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ store: 'Leafhaus MY Horizon Mall' })
+      );
+    });
+  });
+
+  // Pressing Place Order twice while the first order is still placing
+  // only saves once — the guard stops the second call.
+  test('pressing Place Order twice while placing only saves once', async () => {
+    mockCart = [...oneItem];
+    let resolveSave;
+    mockSaveOrder.mockImplementation(
+      () => new Promise((resolve) => { resolveSave = resolve; })
+    );
+    const { UNSAFE_getAllByType } = render(<CartScreen />);
+    fireEvent.press(screen.getByText('Place Order · RM 11.90'));
+    // While placing, the button is disabled and shows a spinner, so a
+    // real press cannot reach the handler — call it directly to reach
+    // the guard.
+    const placeButton = UNSAFE_getAllByType(TouchableOpacity).find(
+      (el) => el.props.disabled === true
+    );
+    expect(placeButton).toBeTruthy();
+    placeButton.props.onPress();
+    expect(mockSaveOrder).toHaveBeenCalledTimes(1);
+    resolveSave({ id: 'ORD-1', pickupNumber: 'T0201' });
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('Order', { orderId: 'ORD-1' });
     });
   });
 });

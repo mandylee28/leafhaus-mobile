@@ -15,13 +15,16 @@ const matcha = DRINKS.find((d) => d.id === 1);
 const mockNavigate = jest.fn();
 const mockAddItem = jest.fn();
 
+// The drink id for the current test; each test can change it before render.
+let mockDrinkId = 1;
+
 // Fake navigation: the screen only needs navigate(), and the route params
 // carrying the drink. (The drink is loaded with require() inside the
 // factory because jest.mock factories cannot see variables from the file.)
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
   useRoute: () => ({
-    params: { drink: require('../data').DRINKS.find((d) => d.id === 1) },
+    params: { drink: require('../data').DRINKS.find((d) => d.id === mockDrinkId) },
   }),
 }));
 
@@ -35,6 +38,7 @@ import CustomiseScreen from '../screens/CustomiseScreen';
 beforeEach(() => {
   mockNavigate.mockClear();
   mockAddItem.mockClear();
+  mockDrinkId = 1;
 });
 
 describe('CustomiseScreen', () => {
@@ -95,5 +99,36 @@ describe('CustomiseScreen', () => {
     render(<CustomiseScreen />);
     fireEvent.press(screen.getByText('+'));
     expect(screen.getByText('Add to Cart · RM 23.80')).toBeOnTheScreen();
+  });
+
+  // The − button never drops the quantity below 1.
+  test('pressing − at quantity 1 keeps the quantity at 1', () => {
+    render(<CustomiseScreen />);
+    fireEvent.press(screen.getByText('−'));
+    expect(screen.getByText('Add to Cart · RM 11.90')).toBeOnTheScreen();
+  });
+
+  // + then − brings the quantity back down to 1.
+  test('pressing + then − brings the quantity back to 1', () => {
+    render(<CustomiseScreen />);
+    fireEvent.press(screen.getByText('+'));
+    expect(screen.getByText('Add to Cart · RM 23.80')).toBeOnTheScreen();
+    fireEvent.press(screen.getByText('−'));
+    expect(screen.getByText('Add to Cart · RM 11.90')).toBeOnTheScreen();
+  });
+
+  // A drink other than id 1 defaults to Normal Sweet, not Less Sweet.
+  test('a drink other than Jasmine Matcha defaults to Normal Sweet', () => {
+    mockDrinkId = 5; // Mango Green Tea
+    render(<CustomiseScreen />);
+    expect(screen.getByText('Mango Green Tea')).toBeOnTheScreen();
+    fireEvent.press(screen.getByText('Add to Cart · RM 11.90'));
+    expect(mockAddItem).toHaveBeenCalledWith({
+      drinkId: 5,
+      size: 'Regular',
+      ice: 'Normal Ice',
+      sweet: 'Normal Sweet',
+      qty: 1,
+    });
   });
 });

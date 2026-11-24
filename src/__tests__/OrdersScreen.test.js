@@ -121,6 +121,13 @@ describe('OrdersScreen', () => {
     await screen.findByText('No orders yet.');
   });
 
+  // A failed load falls back to the empty list and the empty message.
+  test('a failed load shows the empty message', async () => {
+    mockFetchOrders.mockRejectedValueOnce(new Error('database down'));
+    render(<OrdersScreen />);
+    await screen.findByText('No orders yet.');
+  });
+
   // Tapping an order card opens its details with that order's id.
   test('tapping an order opens its details', async () => {
     render(<OrdersScreen />);

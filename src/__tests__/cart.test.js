@@ -80,4 +80,16 @@ describe('calcTotals', () => {
     expect(discount).toBe(0);
     expect(total).toBe(0);
   });
+
+  // A line for a drink that no longer exists is skipped, not charged.
+  test('a line for an unknown drink is skipped', () => {
+    const cart = [
+      { drinkId: 1, size: 'Regular', qty: 1 }, // Jasmine Matcha Pure Tea
+      { drinkId: 999, size: 'Large', qty: 2 }, // no such drink on the menu
+    ];
+    const { subtotal, discount, total } = calcTotals(cart, DRINKS, null);
+    expect(subtotal).toBe(11.9);
+    expect(discount).toBe(0);
+    expect(total).toBe(11.9);
+  });
 });

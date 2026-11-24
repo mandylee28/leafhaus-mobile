@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, TouchableOpacity } from 'react-native';
 
 const mockNavigate = jest.fn();
 const mockFetchOrder = jest.fn();
@@ -153,6 +153,47 @@ describe('OrderScreen', () => {
     expect(screen.getByText('Order Completed')).toBeOnTheScreen();
     expect(screen.getAllByText('✓')).toHaveLength(4);
     fireEvent.press(screen.getByText('Order Completed'));
+    expect(mockUpdateOrderStatus).not.toHaveBeenCalled();
+  });
+
+  // When the status update fails, the order keeps its old status and the
+  // button is usable again.
+  test('a failed status update keeps the old status', async () => {
+    mockUpdateOrderStatus.mockRejectedValueOnce(new Error('offline'));
+    render(<OrderScreen />);
+    await screen.findByText('T0201');
+    fireEvent.press(screen.getByText('Simulate: advance order status'));
+    await waitFor(() => {
+      expect(mockUpdateOrderStatus).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByText('ORDER ORDERED')).toBeOnTheScreen();
+    expect(screen.getAllByText('✓')).toHaveLength(1);
+    expect(screen.getByText('Simulate: advance order status')).toBeOnTheScreen();
+  });
+
+  // An order without a voucher shows no voucher row.
+  test('an order without a voucher shows no voucher row', async () => {
+    mockFetchOrder.mockResolvedValue({ ...placedOrder, voucher: null, discount: 0, total: 11.9 });
+    render(<OrderScreen />);
+    await screen.findByText('T0201');
+    expect(screen.queryByText('Voucher applied')).toBeNull();
+    expect(screen.getByText('- RM 0.00')).toBeOnTheScreen();
+  });
+
+  // The advance button is disabled for a completed order, so a real press
+  // cannot reach the handler — call it directly to cover the guard that
+  // stops a completed order from advancing. (The button is found among
+  // the touchables by its disabled prop; the text's parent is the plain
+  // host View, which has no onPress.)
+  test('invoking advance on a completed order does nothing', async () => {
+    mockFetchOrder.mockResolvedValue(completedOrder);
+    const { UNSAFE_getAllByType } = render(<OrderScreen />);
+    await screen.findByText('T0201');
+    const button = UNSAFE_getAllByType(TouchableOpacity).find(
+      (el) => el.props.disabled === true
+    );
+    expect(button).toBeTruthy();
+    button.props.onPress();
     expect(mockUpdateOrderStatus).not.toHaveBeenCalled();
   });
 });

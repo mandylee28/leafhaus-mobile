@@ -79,14 +79,15 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (63 tests in
+tests starting up React Native). What is covered (82 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
   formatting, and the three voucher rates (WELCOME50 50%, TEA20 20%,
   LEAF10 10%), including lower-case codes and unknown codes.
 - `cart.test.js` — cart totals via `calcTotals()`: single drinks, quantities,
-  each voucher, no voucher, an invalid voucher, and an empty cart.
+  each voucher, no voucher, an invalid voucher, an empty cart, and a
+  line for a drink that no longer exists (skipped, not charged).
 - `orders.test.js` — the four order status steps, 15 Tea Leaves per order,
   pickup-number format (T0201, T0202, ...), the 7-drink menu data, and that
   an order total is the discounted total.
@@ -96,12 +97,19 @@ tests starting up React Native). What is covered (63 tests in
   all size/ice/sweetness options are present, picking Large shows
   RM 13.90 (+RM 2.00), the add-to-cart button shows the total, adding to
   cart calls `addItem` with the chosen options and opens the Cart, and
-  raising the quantity updates the button total.
+  raising the quantity updates the button total. Also: the − button never
+  drops the quantity below 1, and a drink other than Jasmine Matcha
+  defaults to Normal Sweet.
 - `MenuScreen.test.js` — all 7 drink names, the brand and search box, the
   category chips, the local-mode database status (Supabase is faked as
-  "not configured", so the built-in menu is used), search filtering, the
-  empty-search message, and tapping a drink card opening Customise with
-  that drink.
+  "not configured", so the built-in menu is used), search filtering
+  (by name and by description), the empty-search message, tapping a
+  drink card opening Customise with that drink, tapping a category chip
+  filtering the menu, tapping a store chip switching the store, the
+  My Orders and Cart buttons, and the Cart button showing the item
+  count. With Supabase faked as configured, the screen loads the
+  stores, drinks and vouchers from the fake database — and keeps the
+  built-in lists when the database answers with errors or empty lists.
 - `CartScreen.test.js` — the empty cart and its browse button, item lines
   with name, options, quantity and line total, the + / − buttons asking
   the cart to change the quantity (down to 0, which removes the line),
@@ -109,23 +117,32 @@ tests starting up React Native). What is covered (63 tests in
   an invalid voucher showing an error and no discount, and placing the
   order: it saves the order with the cart contents and totals, clears
   the cart, and opens the Order screen, using the selected payment
-  method.
+  method. Also: a failed save shows an alert and keeps the cart,
+  placing with a voucher passes the voucher code, placing with no store
+  picked uses the first store, and pressing Place Order twice while the
+  first order is still placing only saves once.
 - `OrderScreen.test.js` — the loading indicator, the pickup number,
   Tea Leaves, the four status-tracker steps, the item, discount,
   voucher, payment and order time, the "Order not found." state, the
   simulate-advance button moving the status one step forward and saving
   it, and a completed order showing ORDER COMPLETED with a dead button.
+  Also: a failed status update keeps the old status, an order without
+  a voucher shows no voucher row, and invoking advance on a completed
+  order does nothing.
 - `OrdersScreen.test.js` — the loading indicator, two past orders with
   different pickup numbers and statuses, the empty "No orders yet."
-  state, and tapping an order opening its details with that order's id.
+  state, tapping an order opening its details with that order's id,
+  and a failed load falling back to the empty message.
 
 Coverage (`npx jest --coverage`, files touched by tests only):
-statements 65.43%, lines 68.6%, branches 53.67%, functions 67.56%.
-100%: Header, data, theme. CartScreen 95% statements / 97% lines,
-OrderScreen 97% / 100% lines, OrdersScreen 94% / 94% lines,
-CustomiseScreen 90% / 94% lines, pricing 93% / 100% lines,
-MenuScreen 54% / 57% lines. The real `orders.js` storage code is
-barely covered (2%) because the screen tests replace `../orders`
+statements 77.36%, lines 78.92%, branches 71.75%, functions 82.43%.
+100% statements/lines/functions everywhere except `orders.js`:
+Header, data, pricing, theme, CartScreen, CustomiseScreen,
+OrderScreen and OrdersScreen are 100% on every measure, and
+MenuScreen is 100% except two branches (96%) — the `large` flag of
+its cup drawing is never set, so those two branches cannot be
+reached without changing the app. The real `orders.js` storage code
+is barely covered (2%) because the screen tests replace `../orders`
 with a fake — its Supabase and AsyncStorage paths are only checked
 by the pickup-number helper test. Cart/Order/Orders screens are
 tested through their screens, so `cart.js`, `supabase.js` and `App.js`
@@ -151,6 +168,18 @@ jest.fn()` line (imports are hoisted above it), so returning the fn
 directly freezes it as `undefined` and the screen silently fails
 inside its own `try/catch`.
 
+Two more patterns used in the tests: to flip Supabase between "not
+configured" and a fake configured client, the test grabs the mocked
+module with `jest.requireMock('../supabase')` and mutates its two
+fields before render — returning the mutable object from the
+`jest.mock` factory itself does not work, because the factory runs
+before the object is created and the screen then reads `undefined`.
+And a disabled button cannot be pressed through the UI (the testing
+library respects `disabled`), so to reach a guard behind a disabled
+button the tests find the button among the touchables
+(`UNSAFE_getAllByType(TouchableOpacity)`, picked by its `disabled`
+prop) and call its `onPress` prop directly.
+
 The price maths lives in `src/pricing.js` on purpose: the Cart screen
 imports it, and the tests import the same functions, so a test failure
 means the app itself would calculate the wrong price.
@@ -174,7 +203,7 @@ means the app itself would calculate the wrong price.
 - `src/cart.js` — cart state shared by the screens
 - `src/orders.js` — order storage: Supabase when configured, AsyncStorage fallback
 - `src/Header.js` — shared top bar (back button + title) for the inner screens
-- `src/__tests__/` — Jest tests: unit tests (`pricing.test.js`, `cart.test.js`, `orders.test.js`) and component tests (`Header.test.js`, `CustomiseScreen.test.js`, `MenuScreen.test.js`)
+- `src/__tests__/` — Jest tests: unit tests (`pricing.test.js`, `cart.test.js`, `orders.test.js`) and component tests (`Header.test.js`, `CustomiseScreen.test.js`, `MenuScreen.test.js`, `CartScreen.test.js`, `OrderScreen.test.js`, `OrdersScreen.test.js`)
 - `jest.config.js` — Jest preset (`jest-expo`)
 - `jest.setup.js` — test setup: mocks AsyncStorage (a phone-only module)
 - `src/screens/MenuScreen.js` — store picker, search, categories, menu
