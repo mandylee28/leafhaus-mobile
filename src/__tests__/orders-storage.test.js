@@ -356,6 +356,94 @@ describe('saveOrder — Supabase path', () => {
   });
 });
 
+describe('saveOrder — pickup-number retry (Supabase path)', () => {
+  // Two orders placed at the same moment both count the same number of
+  // rows, so both try the same pickup number. The database rejects the
+  // second one with Postgres code 23505 (unique violation on
+  // pickup_number), and saveOrder retries with the next number.
+  const conflictError = () =>
+    Object.assign(
+      new Error(
+        'duplicate key value violates unique constraint "orders_pickup_number_key"'
+      ),
+      { code: '23505' }
+    );
+
+  test('a 23505 on the first attempt retries with the next pickup number', async () => {
+    useFakeSupabase();
+    const firstBuilder = builderFor({ data: null, error: conflictError() });
+    const retryBuilder = builderFor({ data: { id: 'db-9' }, error: null });
+    const itemsBuilder = builderFor({ error: null });
+    mockFrom
+      .mockImplementationOnce(() => builderFor({ count: 2 }))
+      .mockImplementationOnce(() => firstBuilder)
+      .mockImplementationOnce(() => retryBuilder)
+      .mockImplementationOnce(() => itemsBuilder);
+
+    const saved = await saveOrder(draft);
+
+    // The first attempt tried T0203 and hit the conflict; the retry used
+    // T0204 and saved, and the items went with the saved order.
+    expect(saved).toEqual({ ...draft, id: 'db-9', pickupNumber: 'T0204' });
+    expect(firstBuilder.insert).toHaveBeenCalledTimes(1);
+    expect(firstBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ pickup_number: 'T0203' })
+    );
+    expect(retryBuilder.insert).toHaveBeenCalledTimes(1);
+    expect(retryBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ pickup_number: 'T0204' })
+    );
+    expect(mockFrom).toHaveBeenNthCalledWith(4, 'order_items');
+  });
+
+  test('three 23505s in a row throws the last error', async () => {
+    useFakeSupabase();
+    const orderBuilder = builderFor({ data: null, error: conflictError() });
+    mockFrom
+      .mockImplementationOnce(() => builderFor({ count: 2 }))
+      .mockImplementationOnce(() => orderBuilder)
+      .mockImplementationOnce(() => orderBuilder)
+      .mockImplementationOnce(() => orderBuilder);
+
+    await expect(saveOrder(draft)).rejects.toThrow('duplicate key value');
+    // T0203, T0204, T0205 — then it gives up, and no items were inserted.
+    expect(orderBuilder.insert).toHaveBeenCalledTimes(3);
+    expect(orderBuilder.insert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ pickup_number: 'T0203' })
+    );
+    expect(orderBuilder.insert).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ pickup_number: 'T0204' })
+    );
+    expect(orderBuilder.insert).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ pickup_number: 'T0205' })
+    );
+    expect(mockFrom).not.toHaveBeenCalledWith('order_items');
+  });
+
+  // Anything that is not a pickup-number clash is a real failure — retrying
+  // the same insert would only fail the same way.
+  test('a non-23505 error throws immediately without retrying', async () => {
+    useFakeSupabase();
+    const orderBuilder = builderFor({
+      data: null,
+      error: new Error('db down'),
+    });
+    mockFrom
+      .mockImplementationOnce(() => builderFor({ count: 0 }))
+      .mockImplementationOnce(() => orderBuilder);
+
+    await expect(saveOrder(draft)).rejects.toThrow('db down');
+    expect(orderBuilder.insert).toHaveBeenCalledTimes(1);
+    expect(orderBuilder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ pickup_number: 'T0201' })
+    );
+    expect(mockFrom).not.toHaveBeenCalledWith('order_items');
+  });
+});
+
 describe('saveOrder / fetchOrders / fetchOrder — local fallback', () => {
   // Offline, the order is stored on the device with a generated id and
   // the next pickup number from how many orders are already stored.
