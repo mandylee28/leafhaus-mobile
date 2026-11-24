@@ -1,5 +1,6 @@
-// Leafhaus — Order Details screen: pickup number, Tea Leaves, status tracker,
-// discount/subtotal/payment summary, order time and order number.
+// Leafhaus — Order Details screen: pickup number, Tea Leaves, status tracker
+// (dashed connectors between the steps), discount/subtotal/payment summary,
+// and order time and order number behind a "More Details" fold.
 
 import React, { useCallback, useState } from 'react';
 import {
@@ -22,6 +23,7 @@ export default function OrderScreen() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [advancing, setAdvancing] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const load = useCallback(async () => {
     const found = await fetchOrder(orderId);
@@ -85,19 +87,31 @@ export default function OrderScreen() {
       </View>
 
       <View style={styles.tracker}>
-        {STATUS_STEPS.map((step, i) => {
-          const isDone = i <= order.status;
-          return (
-            <View key={step} style={styles.step}>
-              <View style={[styles.dot, isDone && styles.dotDone]}>
-                <Text style={[styles.dotText, isDone && styles.dotTextDone]}>
-                  {isDone ? '✓' : i + 1}
-                </Text>
+        {[0, 1, 2].map((i) => (
+          <View
+            key={`connector-${i}`}
+            testID="tracker-connector"
+            style={[
+              styles.connector,
+              { left: `${(2 * i + 1) * 12.5}%`, width: '25%' },
+            ]}
+          />
+        ))}
+        <View style={styles.trackerRow}>
+          {STATUS_STEPS.map((step, i) => {
+            const isDone = i <= order.status;
+            return (
+              <View key={step} style={styles.step}>
+                <View style={[styles.dot, isDone && styles.dotDone]}>
+                  <Text style={[styles.dotText, isDone && styles.dotTextDone]}>
+                    {isDone ? '✓' : i + 1}
+                  </Text>
+                </View>
+                <Text style={[styles.stepLabel, isDone && styles.stepLabelDone]}>{step}</Text>
               </View>
-              <Text style={[styles.stepLabel, isDone && styles.stepLabelDone]}>{step}</Text>
-            </View>
-          );
-        })}
+            );
+          })}
+        </View>
       </View>
 
       <View style={styles.line}>
@@ -140,14 +154,27 @@ export default function OrderScreen() {
         </View>
       </View>
 
-      <View style={styles.line}>
-        <Text style={styles.label}>Order Time</Text>
-        <Text>{formatTime(order.time)}</Text>
-      </View>
-      <View style={styles.line}>
-        <Text style={styles.label}>Order Number</Text>
-        <Text>{order.orderNumber}</Text>
-      </View>
+      <TouchableOpacity
+        style={styles.detailsToggle}
+        onPress={() => setDetailsOpen((open) => !open)}
+      >
+        <Text style={styles.detailsToggleText}>
+          {detailsOpen ? 'Fold ⌃' : 'More Details ⌄'}
+        </Text>
+      </TouchableOpacity>
+
+      {detailsOpen ? (
+        <>
+          <View style={styles.line}>
+            <Text style={styles.label}>Order Time</Text>
+            <Text>{formatTime(order.time)}</Text>
+          </View>
+          <View style={styles.line}>
+            <Text style={styles.label}>Order Number</Text>
+            <Text>{order.orderNumber}</Text>
+          </View>
+        </>
+      ) : null}
 
       <TouchableOpacity
         style={[styles.primary, done && styles.primaryDisabled]}
@@ -187,7 +214,21 @@ const styles = StyleSheet.create({
   heroLabel: { color: COLORS.muted, marginTop: 10 },
   pickup: { fontSize: 40, fontWeight: '800', color: COLORS.gold, letterSpacing: 2, marginVertical: 6 },
   leaves: { color: COLORS.gold, fontWeight: '600' },
-  tracker: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 14 },
+  tracker: { marginVertical: 14 },
+  trackerRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  // Dashed line between two adjacent step dots: absolutely positioned so
+  // it runs from one dot's centre to the next (dot centres sit at 1/8,
+  // 3/8, 5/8 and 7/8 of the tracker width), at dot height (the 28px dot's
+  // centre is 14px down; the 2px border sits at 13–15px). The dots are
+  // opaque and paint over the line ends, so the line looks joined to them.
+  connector: {
+    position: 'absolute',
+    top: 13,
+    height: 0,
+    borderTopWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.goldSoft,
+  },
   step: { flex: 1, alignItems: 'center' },
   dot: {
     width: 28,
@@ -228,6 +269,16 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontWeight: '700', color: COLORS.navy, fontSize: 17 },
   discount: { color: COLORS.red },
+  detailsToggle: {
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  detailsToggleText: { color: COLORS.gold, fontWeight: '700', fontSize: 15 },
   primary: {
     backgroundColor: COLORS.navy,
     borderRadius: 999,

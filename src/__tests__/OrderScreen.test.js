@@ -1,6 +1,7 @@
 // Component tests for the Order Details screen (src/screens/OrderScreen.js):
-// pickup number, Tea Leaves, status tracker, order summary, the
-// simulate-advance button, and the loading and not-found states.
+// pickup number, Tea Leaves, status tracker (with dashed connectors),
+// order summary, the "More Details" fold for order time and order number,
+// the simulate-advance button, and the loading and not-found states.
 // The screen loads its order through ../orders, so that module is
 // replaced with a fake holding one realistic order — the test checks
 // what the screen shows and what it asks the order store to do, not
@@ -8,7 +9,8 @@
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { ActivityIndicator, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
+import { COLORS } from '../theme';
 
 const mockNavigate = jest.fn();
 const mockFetchOrder = jest.fn();
@@ -97,7 +99,8 @@ describe('OrderScreen', () => {
   });
 
   // The details screen shows the pickup number, Tea Leaves, the tracker,
-  // the item, the discount and voucher, the payment and the order time.
+  // the item, the discount and voucher, and the payment. Order time and
+  // order number start folded away behind "More Details" (see below).
   test('renders the pickup number, Tea Leaves and order details', async () => {
     render(<OrderScreen />);
     await screen.findByText('T0201');
@@ -110,15 +113,65 @@ describe('OrderScreen', () => {
     expect(screen.getByText('Voucher applied')).toBeOnTheScreen();
     expect(screen.getByText('WELCOME50')).toBeOnTheScreen();
     expect(screen.getByText("Touch 'n Go")).toBeOnTheScreen();
-    expect(screen.getByText('123456789012')).toBeOnTheScreen();
-    // The time is shown as DD/MM/YYYY HH:MM:SS (local timezone, so the
-    // exact numbers depend on where the test runs — check the shape only).
-    expect(screen.getByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}/)).toBeOnTheScreen();
+    expect(screen.getByText('More Details ⌄')).toBeOnTheScreen();
+    expect(screen.queryByText('123456789012')).toBeNull();
     expect(screen.getAllByText('RM 5.95')).toHaveLength(2); // subtotal row and payment row
     ['Ordered', 'Preparing', 'Collection', 'Completed'].forEach((step) => {
       expect(screen.getByText(step)).toBeOnTheScreen();
     });
     expect(screen.getAllByText('✓')).toHaveLength(1); // only the first step is done
+  });
+
+  // Order Time and Order Number are folded away on first render.
+  test('order time and order number are hidden on first render', async () => {
+    render(<OrderScreen />);
+    await screen.findByText('T0201');
+    expect(screen.getByText('More Details ⌄')).toBeOnTheScreen();
+    expect(screen.queryByText('Order Time')).toBeNull();
+    expect(screen.queryByText('Order Number')).toBeNull();
+    expect(screen.queryByText('123456789012')).toBeNull();
+    // The time is shown as DD/MM/YYYY HH:MM:SS — check the shape only
+    // (local timezone, so the exact numbers depend on where the test runs).
+    expect(screen.queryByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}/)).toBeNull();
+  });
+
+  // Tapping "More Details" reveals the time and number and turns the
+  // button into "Fold"; tapping "Fold" hides them again.
+  test('tapping More Details reveals the details and Fold hides them', async () => {
+    render(<OrderScreen />);
+    await screen.findByText('T0201');
+    fireEvent.press(screen.getByText('More Details ⌄'));
+    expect(screen.getByText('Order Time')).toBeOnTheScreen();
+    expect(screen.getByText('Order Number')).toBeOnTheScreen();
+    expect(screen.getByText('123456789012')).toBeOnTheScreen();
+    expect(screen.getByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}/)).toBeOnTheScreen();
+    expect(screen.getByText('Fold ⌃')).toBeOnTheScreen();
+    expect(screen.queryByText('More Details ⌄')).toBeNull();
+    fireEvent.press(screen.getByText('Fold ⌃'));
+    expect(screen.queryByText('Order Time')).toBeNull();
+    expect(screen.queryByText('Order Number')).toBeNull();
+    expect(screen.queryByText('123456789012')).toBeNull();
+    expect(screen.getByText('More Details ⌄')).toBeOnTheScreen();
+  });
+
+  // The status tracker has one dashed connector line between each pair of
+  // adjacent steps — three connectors for four steps — whatever the order
+  // status is.
+  test('the tracker renders three dashed connectors between the steps', async () => {
+    const { unmount } = render(<OrderScreen />);
+    await screen.findByText('T0201');
+    const connectors = screen.getAllByTestId('tracker-connector');
+    expect(connectors).toHaveLength(3);
+    connectors.forEach((connector) => {
+      const style = StyleSheet.flatten(connector.props.style);
+      expect(style.borderStyle).toBe('dashed');
+      expect(style.borderColor).toBe(COLORS.goldSoft);
+    });
+    unmount();
+    mockFetchOrder.mockResolvedValue(completedOrder);
+    render(<OrderScreen />);
+    await screen.findByText('T0201');
+    expect(screen.getAllByTestId('tracker-connector')).toHaveLength(3);
   });
 
   // An unknown order id shows the not-found message instead of details.

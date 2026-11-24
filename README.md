@@ -81,7 +81,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (129 tests in
+tests starting up React Native). What is covered (132 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -130,7 +130,10 @@ tests starting up React Native). What is covered (129 tests in
   it, and a completed order showing ORDER COMPLETED with a dead button.
   Also: a failed status update keeps the old status, an order without
   a voucher shows no voucher row, and invoking advance on a completed
-  order does nothing.
+  order does nothing. The tracker has three dashed connector lines
+  between the steps, and Order Time and Order Number start folded
+  behind a "More Details" toggle — tapping it reveals them and turns
+  it into "Fold", tapping "Fold" hides them again.
 - `OrdersScreen.test.js` — the loading indicator, two past orders with
   different pickup numbers and statuses, the empty "No orders yet."
   state, tapping an order opening its details with that order's id,
