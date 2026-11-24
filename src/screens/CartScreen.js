@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,10 +19,7 @@ import Header from '../Header';
 import { DRINKS, LEAVES_PER_ORDER, STORES, money } from '../data';
 import { useCart } from '../cart';
 import { saveOrder } from '../orders';
-
-function unitPrice(drink, size) {
-  return drink.price + (size === 'Large' ? 2 : 0);
-}
+import { calcTotals, unitPrice, voucherRate } from '../pricing';
 
 export default function CartScreen() {
   const navigation = useNavigation();
@@ -32,19 +30,19 @@ export default function CartScreen() {
   const [payment, setPayment] = useState("Touch 'n Go");
   const [placing, setPlacing] = useState(false);
 
-  const subtotal = cart.reduce((sum, item) => {
-    const drink = DRINKS.find((d) => d.id === item.drinkId);
-    return sum + unitPrice(drink, item.size) * item.qty;
-  }, 0);
-  const discount = voucher ? subtotal * voucher.rate : 0;
-  const total = subtotal - discount;
+  // The maths lives in src/pricing.js so it can be unit-tested directly.
+  const { subtotal, discount, total } = calcTotals(
+    cart,
+    DRINKS,
+    voucher ? voucher.code : null
+  );
 
   function applyVoucher() {
-    const code = voucherCode.trim().toUpperCase();
-    const rates = { WELCOME50: 0.5, TEA20: 0.2, LEAF10: 0.1 };
-    if (rates[code]) {
-      setVoucher({ code, rate: rates[code] });
-      setVoucherMsg(`Voucher applied: ${Math.round(rates[code] * 100)}% off.`);
+    const rate = voucherRate(voucherCode);
+    if (rate) {
+      const code = voucherCode.trim().toUpperCase();
+      setVoucher({ code, rate });
+      setVoucherMsg(`Voucher applied: ${Math.round(rate * 100)}% off.`);
     } else {
       setVoucher(null);
       setVoucherMsg('That voucher code is not valid. Try WELCOME50, TEA20 or LEAF10.');
@@ -113,7 +111,15 @@ export default function CartScreen() {
         return (
           <View key={i} style={styles.item}>
             <View style={[styles.thumb, { backgroundColor: drink.bg }]}>
-              <View style={[styles.thumbCup, { backgroundColor: drink.color }]} />
+              {drink.image ? (
+                <Image
+                  source={drink.image}
+                  style={styles.thumbImage}
+                  resizeMode="contain"
+                  testID={`cart-photo-${drink.id}`}
+                  accessibilityLabel={drink.name}
+                />
+              ) : null}
             </View>
             <View style={styles.info}>
               <Text style={styles.itemName}>{drink.name}</Text>
@@ -231,7 +237,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  thumbCup: { width: 24, height: 36, borderRadius: 4 },
+  thumbImage: { width: '100%', height: '100%', borderRadius: 8 },
   info: { flex: 1 },
   itemName: { fontWeight: '700', color: COLORS.navy },
   itemMeta: { fontSize: 13, color: COLORS.muted, marginTop: 2 },

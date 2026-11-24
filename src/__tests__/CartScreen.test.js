@@ -56,7 +56,21 @@ jest.mock('../supabase', () => ({
   isSupabaseConfigured: false,
 }));
 
+// The drink data, with one drink's photo removed: drink 1 (Jasmine Matcha
+// Pure Tea) has no image here, so the no-photo fallback is covered — its
+// cart thumbnail is just its coloured background.
+jest.mock('../data', () => {
+  const actual = jest.requireActual('../data');
+  return {
+    ...actual,
+    DRINKS: actual.DRINKS.map((d) =>
+      d.id === 1 ? { ...d, image: undefined } : d
+    ),
+  };
+});
+
 import CartScreen from '../screens/CartScreen';
+import { DRINKS } from '../data';
 
 beforeEach(() => {
   mockNavigate.mockClear();
@@ -102,6 +116,27 @@ describe('CartScreen', () => {
     expect(screen.getByText('RM 11.90')).toBeOnTheScreen();
     expect(screen.getAllByText('RM 35.70')).toHaveLength(2); // subtotal and total
     expect(screen.getByText('Place Order · RM 35.70')).toBeOnTheScreen();
+  });
+
+  // Each cart line shows the drink's photo in the thumbnail, not the old
+  // coloured swatch — the Image source is the drink's own photo.
+  test('each cart item shows its drink photo', () => {
+    mockCart = [
+      { drinkId: 5, size: 'Regular', ice: 'Normal Ice', sweet: 'Less Sweet', qty: 1 },
+    ];
+    render(<CartScreen />);
+    const photo = screen.getByTestId('cart-photo-5');
+    expect(photo).toBeOnTheScreen();
+    expect(photo.props.source).toBe(DRINKS.find((d) => d.id === 5).image);
+  });
+
+  // A drink with no photo shows just its coloured background, no photo.
+  // (Drink 1 has no image in this file's data mock above.)
+  test('a drink without a photo shows no photo', () => {
+    mockCart = [...oneItem];
+    render(<CartScreen />);
+    expect(screen.getByText('Jasmine Matcha Pure Tea')).toBeOnTheScreen();
+    expect(screen.queryByTestId('cart-photo-1')).toBeNull();
   });
 
   // The + button asks the cart to raise the quantity by one.

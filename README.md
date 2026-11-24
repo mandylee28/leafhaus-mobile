@@ -81,7 +81,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (135 tests in
+tests starting up React Native). What is covered (137 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -125,7 +125,9 @@ tests starting up React Native). What is covered (135 tests in
   method. Also: a failed save shows an alert and keeps the cart,
   placing with a voucher passes the voucher code, placing with no store
   picked uses the first store, and pressing Place Order twice while the
-  first order is still placing only saves once.
+  first order is still placing only saves once. Each cart item shows its
+  drink photo in the thumbnail, and a drink with no photo shows just its
+  coloured background.
 - `OrderScreen.test.js` — the loading indicator, the pickup number,
   Tea Leaves, the four status-tracker steps, the item, discount,
   voucher, payment and order time, the "Order not found." state, the
