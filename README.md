@@ -1,5 +1,7 @@
 # Leafhaus (Mobile App)
 
+[![Tests](https://github.com/mandylee28/leafhaus-mobile/actions/workflows/test.yml/badge.svg)](https://github.com/mandylee28/leafhaus-mobile/actions/workflows/test.yml)
+
 Leafhaus is a tea drink ordering **mobile app** built with Expo + React Native.
 Browse the menu, customise a drink, add it to your cart, apply a voucher, and
 place a pickup order. Track the order from Ordered to Completed, and revisit
@@ -79,7 +81,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (82 tests in
+tests starting up React Native). What is covered (126 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -133,20 +135,41 @@ tests starting up React Native). What is covered (82 tests in
   different pickup numbers and statuses, the empty "No orders yet."
   state, tapping an order opening its details with that order's id,
   and a failed load falling back to the empty message.
+- `orders-storage.test.js` — the real `orders.js` storage code on both
+  paths: with Supabase faked as configured, the list/detail/update/save
+  calls (including the exact query arguments, the pickup number from the
+  order count, and the order + items inserts), and the error paths
+  (a failed list, detail, update or save throws; a save with no id
+  back throws "Could not save order"); and in local mode, saving and
+  reading orders through AsyncStorage (generated ids, T0201/T0202,
+  newest-first sorting, updating a status, a no-op for an unknown id,
+  and corrupted storage reading back as an empty list).
+- `cart-context.test.js` — the `CartProvider` itself, driven through a
+  small probe component: adding a line, merging the same drink and
+  options into one line, keeping a different size on its own line,
+  changing a quantity (including 0 removing the line, and leaving the
+  other lines alone), clearing the cart, picking a store, and `useCart`
+  throwing outside the provider.
+- `supabase.test.js` — `isSupabaseConfigured` is false with no variables
+  or with the placeholder URL/key or only one of them set, and true with
+  a real-looking URL and key (in which case a client is created with
+  exactly those two values). Each test loads a fresh copy of the module
+  after setting the environment, because the module reads it once at
+  load time.
+- `App.test.js` — the real App renders and opens on the Menu screen
+  (brand and drinks shown, My Orders button present). The native-stack
+  screens and the safe-area provider are replaced with plain Views
+  that render their children — see the mock notes below — because the
+  real native views never mount their children under Jest.
 
 Coverage (`npx jest --coverage`, files touched by tests only):
-statements 77.36%, lines 78.92%, branches 71.75%, functions 82.43%.
-100% statements/lines/functions everywhere except `orders.js`:
-Header, data, pricing, theme, CartScreen, CustomiseScreen,
-OrderScreen and OrdersScreen are 100% on every measure, and
-MenuScreen is 100% except two branches (96%) — the `large` flag of
-its cup drawing is never set, so those two branches cannot be
-reached without changing the app. The real `orders.js` storage code
-is barely covered (2%) because the screen tests replace `../orders`
-with a fake — its Supabase and AsyncStorage paths are only checked
-by the pickup-number helper test. Cart/Order/Orders screens are
-tested through their screens, so `cart.js`, `supabase.js` and `App.js`
-have no tests of their own yet.
+statements 100%, lines 100%, functions 100%, branches 98.97%.
+Every file is 100% on every measure except MenuScreen, which is 100%
+except two branches (96%) — the `large` flag of its cup drawing is
+never set anywhere in the app, so those two branches cannot be reached
+without changing the app. That is the only uncovered code left, and it
+is deliberate: reaching 100% branches would mean drawing a large cup
+that no screen ever shows.
 
 To add a new test, create a file ending in `.test.js` inside
 `src/__tests__/` and run `npm test` — Jest picks it up automatically.
@@ -180,6 +203,28 @@ button the tests find the button among the touchables
 (`UNSAFE_getAllByType(TouchableOpacity)`, picked by its `disabled`
 prop) and call its `onPress` prop directly.
 
+Three more patterns, all from `App.test.js`: the real `SafeAreaProvider`
+swallows its children under Jest, so the test replaces
+`react-native-safe-area-context` with pass-through components — and the
+mock must also export `SafeAreaInsetsContext` and `SafeAreaFrameContext`
+(real contexts), because navigation's `SafeAreaProviderCompat` reads
+them directly and an undefined context crashes `useContext`. The
+native-stack screens (`react-native-screens`) are replaced the same
+way — `Screen`, `ScreenContainer` and `ScreenStack` become plain Views
+that render their children — because the real native views never mount
+their children under Jest. And in `supabase.test.js`, the module is
+loaded fresh per test (`jest.resetModules()` + `require`), which also
+re-runs the `@supabase/supabase-js` mock factory — so the test must
+assert on the `createClient` returned by that fresh require, not on a
+top-level import, which still points at the pre-reset instance.
+
+To test the Supabase storage path (`orders-storage.test.js`), fake the
+client as a chainable builder: every method returns the builder itself
+and awaiting it resolves with a canned result, which is how the real
+client behaves. One builder per call, in call order, so the test can
+check the exact arguments of each step (the count query, the order
+insert, the items insert).
+
 The price maths lives in `src/pricing.js` on purpose: the Cart screen
 imports it, and the tests import the same functions, so a test failure
 means the app itself would calculate the wrong price.
@@ -203,7 +248,7 @@ means the app itself would calculate the wrong price.
 - `src/cart.js` — cart state shared by the screens
 - `src/orders.js` — order storage: Supabase when configured, AsyncStorage fallback
 - `src/Header.js` — shared top bar (back button + title) for the inner screens
-- `src/__tests__/` — Jest tests: unit tests (`pricing.test.js`, `cart.test.js`, `orders.test.js`) and component tests (`Header.test.js`, `CustomiseScreen.test.js`, `MenuScreen.test.js`, `CartScreen.test.js`, `OrderScreen.test.js`, `OrdersScreen.test.js`)
+- `src/__tests__/` — Jest tests: unit tests (`pricing.test.js`, `cart.test.js`, `orders.test.js`, `orders-storage.test.js`, `cart-context.test.js`, `supabase.test.js`) and component tests (`Header.test.js`, `CustomiseScreen.test.js`, `MenuScreen.test.js`, `CartScreen.test.js`, `OrderScreen.test.js`, `OrdersScreen.test.js`, `App.test.js`)
 - `jest.config.js` — Jest preset (`jest-expo`)
 - `jest.setup.js` — test setup: mocks AsyncStorage (a phone-only module)
 - `src/screens/MenuScreen.js` — store picker, search, categories, menu
