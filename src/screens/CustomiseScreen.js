@@ -1,7 +1,7 @@
 // Leafhaus — Drink customisation screen: size, ice, sweetness, quantity.
 
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../theme';
 import Header from '../Header';
@@ -49,9 +49,16 @@ export default function CustomiseScreen() {
     <View style={styles.container}>
       <Header title="Customise Drink" />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <View style={[styles.cup, { backgroundColor: drink.bg }]}>
-        <View style={styles.cupLid} />
-        <View style={[styles.cupBody, { backgroundColor: drink.color }]} />
+      <View style={[styles.photo, { backgroundColor: drink.bg }]}>
+        {drink.image ? (
+          <Image
+            source={drink.image}
+            style={styles.photoImage}
+            resizeMode="contain"
+            testID="drink-photo"
+            accessibilityLabel={drink.name}
+          />
+        ) : null}
       </View>
       <Text style={styles.name}>{drink.name}</Text>
       <Text style={styles.price}>{money(unitPrice)}</Text>
@@ -107,15 +114,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream2 },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 32 },
-  cup: {
+  photo: {
     height: 150,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     marginBottom: 12,
   },
-  cupLid: { width: 54, height: 10, borderRadius: 5, backgroundColor: COLORS.navy, marginBottom: 2 },
-  cupBody: { width: 46, height: 76, borderRadius: 8 },
+  photoImage: { width: '100%', height: '100%' },
   name: { fontSize: 22, fontWeight: '800', color: COLORS.navy },
   price: { fontSize: 18, fontWeight: '700', color: COLORS.gold, marginTop: 4 },
   desc: { color: COLORS.muted, marginTop: 4 },

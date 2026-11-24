@@ -81,7 +81,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (132 tests in
+tests starting up React Native). What is covered (135 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -101,7 +101,8 @@ tests starting up React Native). What is covered (132 tests in
   cart calls `addItem` with the chosen options and opens the Cart, and
   raising the quantity updates the button total. Also: the − button never
   drops the quantity below 1, and a drink other than Jasmine Matcha
-  defaults to Normal Sweet.
+  defaults to Normal Sweet. The drink photo is shown at the top, and a
+  drink with no photo shows none.
 - `MenuScreen.test.js` — all 7 drink names, the brand and search box, the
   category chips, the local-mode database status (Supabase is faked as
   "not configured", so the built-in menu is used), search filtering
@@ -109,7 +110,9 @@ tests starting up React Native). What is covered (132 tests in
   drink card opening Customise with that drink, tapping a category chip
   filtering the menu, tapping a store chip switching the store, the
   My Orders and Cart buttons, and the Cart button showing the item
-  count. With Supabase faked as configured, the screen loads the
+  count. Each drink card shows its photo (local assets in
+  `assets/drinks/`); a database drink reuses the built-in photo for the
+  same id, and one with no match shows none. With Supabase faked as configured, the screen loads the
   stores, drinks and vouchers from the fake database — and keeps the
   built-in lists when the database answers with errors or empty lists.
 - `CartScreen.test.js` — the empty cart and its browse button, item lines

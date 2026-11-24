@@ -59,6 +59,14 @@ describe('MenuScreen', () => {
     });
   });
 
+  // Every drink card shows its photo.
+  test('each drink shows its photo', () => {
+    render(<MenuScreen />);
+    DRINKS.forEach((drink) => {
+      expect(screen.getByTestId(`drink-photo-${drink.id}`)).toBeOnTheScreen();
+    });
+  });
+
   // The top bar has the Leafhaus brand and the search box.
   test('renders the brand and the search box', () => {
     render(<MenuScreen />);
@@ -162,8 +170,9 @@ describe('MenuScreen with Supabase configured', () => {
     return p;
   }
 
-  // Database rows: one store, two drinks (one with full details, one
-  // with none, so the fallbacks are used), one voucher.
+  // Database rows: one store, three drinks (one with full details, one
+  // with none, so the fallbacks are used, and one whose id matches a
+  // built-in drink, so it reuses that drink's photo), one voucher.
   const dbRows = {
     stores: { error: null, data: [{ name: 'Leafhaus MY Test Store' }] },
     drinks: {
@@ -171,6 +180,7 @@ describe('MenuScreen with Supabase configured', () => {
       data: [
         { id: 101, name: 'DB Test Tea', price: 12.5, category: 'Pure Tea', description: 'From the database', color: '#123456', bg: '#f0f0f0' },
         { id: 102, name: 'DB Plain Tea', price: 9.9, category: 'Pure Tea' },
+        { id: 3, name: 'DB Pearl Tea', price: 13.9, category: 'Milk Tea', description: 'From the database too', color: '#654321', bg: '#f0e0d0' },
       ],
     },
     vouchers: { error: null, data: [{ code: 'DB50', discount_rate: 0.5 }] },
@@ -194,6 +204,11 @@ describe('MenuScreen with Supabase configured', () => {
     expect(screen.getByText('Test Store')).toBeOnTheScreen();
     expect(screen.getByText('Vouchers: DB50')).toBeOnTheScreen();
     expect(screen.queryByText('Jasmine Matcha Pure Tea')).toBeNull();
+    // A database drink with no built-in match has no photo; one whose id
+    // matches a built-in drink reuses that drink's photo.
+    expect(screen.queryByTestId('drink-photo-101')).toBeNull();
+    expect(screen.queryByTestId('drink-photo-102')).toBeNull();
+    expect(screen.getByTestId('drink-photo-3')).toBeOnTheScreen();
   });
 
   // When the database answers with errors or empty lists, the built-in

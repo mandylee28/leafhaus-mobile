@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,17 +16,6 @@ import { COLORS } from '../theme';
 import { CATEGORIES, DRINKS, STORES, VOUCHERS, money } from '../data';
 import { isSupabaseConfigured, supabase } from '../supabase';
 import { useCart } from '../cart';
-
-function Cup({ drink, large }) {
-  return (
-    <View style={[styles.cup, { backgroundColor: drink.bg }]}>
-      <View style={[styles.cupLid, large && styles.cupLidLarge]} />
-      <View style={[styles.cupBody, { backgroundColor: drink.color }, large && styles.cupBodyLarge]}>
-        <View style={styles.cupShine} />
-      </View>
-    </View>
-  );
-}
 
 export default function MenuScreen() {
   const navigation = useNavigation();
@@ -56,15 +46,21 @@ export default function MenuScreen() {
         const drinksRes = await supabase.from('drinks').select('*').order('id');
         if (!drinksRes.error && drinksRes.data && drinksRes.data.length > 0) {
           setDrinks(
-            drinksRes.data.map((d) => ({
-              id: d.id,
-              name: d.name,
-              price: Number(d.price),
-              category: d.category,
-              desc: d.description || '',
-              color: d.color || '#a97c2f',
-              bg: d.bg || '#f5ead2',
-            }))
+            drinksRes.data.map((d) => {
+              // The database holds no photos: reuse the built-in photo for
+              // the same drink id, so database drinks show a photo too.
+              const local = DRINKS.find((b) => b.id === d.id);
+              return {
+                id: d.id,
+                name: d.name,
+                price: Number(d.price),
+                category: d.category,
+                desc: d.description || '',
+                color: d.color || '#a97c2f',
+                bg: d.bg || '#f5ead2',
+                image: local ? local.image : undefined,
+              };
+            })
           );
         }
         const vouchersRes = await supabase.from('vouchers').select('code, discount_rate');
@@ -156,7 +152,17 @@ export default function MenuScreen() {
               style={styles.card}
               onPress={() => navigation.navigate('Customise', { drink: item })}
             >
-              <Cup drink={item} />
+              <View style={[styles.drinkPhoto, { backgroundColor: item.bg }]}>
+                {item.image ? (
+                  <Image
+                    source={item.image}
+                    style={styles.drinkImage}
+                    resizeMode="contain"
+                    testID={`drink-photo-${item.id}`}
+                    accessibilityLabel={item.name}
+                  />
+                ) : null}
+              </View>
               <Text style={styles.cardName}>{item.name}</Text>
               <Text style={styles.cardDesc}>{item.desc}</Text>
               <Text style={styles.cardPrice}>{money(item.price)}</Text>
@@ -249,21 +255,15 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 15, fontWeight: '700', color: COLORS.navy, marginTop: 8 },
   cardDesc: { fontSize: 12, color: COLORS.muted, marginTop: 2 },
   cardPrice: { fontSize: 15, fontWeight: '700', color: COLORS.gold, marginTop: 6 },
-  cup: {
+  drinkPhoto: {
     height: 110,
     borderRadius: 10,
+    backgroundColor: COLORS.cream2,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  cupLid: { width: 44, height: 8, borderRadius: 4, backgroundColor: COLORS.navy, marginBottom: 2 },
-  cupLidLarge: { width: 54, height: 10 },
-  cupBody: { width: 36, height: 56, borderRadius: 6, overflow: 'hidden' },
-  cupBodyLarge: { width: 46, height: 72 },
-  cupShine: {
-    width: 36,
-    height: 10,
-    backgroundColor: 'rgba(255,255,255,0.35)',
-  },
+  drinkImage: { width: '100%', height: '100%' },
   empty: { textAlign: 'center', color: COLORS.muted, padding: 24 },
   promo: {
     backgroundColor: COLORS.navy,

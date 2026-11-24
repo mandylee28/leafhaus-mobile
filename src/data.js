@@ -18,19 +18,26 @@ export const VOUCHERS = {
 
 export const DRINKS = [
   { id: 1, name: 'Jasmine Matcha Pure Tea', price: 11.9, category: 'Matcha',
-    desc: 'Jasmine green tea with matcha', color: '#7a9b57', bg: '#eef3e4' },
+    desc: 'Jasmine green tea with matcha', color: '#7a9b57', bg: '#eef3e4',
+    image: require('../assets/drinks/drink-1-jasmine-matcha.png') },
   { id: 2, name: 'Jasmine Green Milk Tea', price: 12.9, category: 'Milk Tea',
-    desc: 'Jasmine green tea, fresh milk', color: '#b9c98a', bg: '#f2f4e2' },
+    desc: 'Jasmine green tea, fresh milk', color: '#b9c98a', bg: '#f2f4e2',
+    image: require('../assets/drinks/drink-2-jasmine-milk-tea.png') },
   { id: 3, name: 'Brown Sugar Pearl Milk Tea', price: 13.9, category: 'Milk Tea',
-    desc: 'Brown sugar pearls, milk tea', color: '#8a5a33', bg: '#f3e7d8' },
+    desc: 'Brown sugar pearls, milk tea', color: '#8a5a33', bg: '#f3e7d8',
+    image: require('../assets/drinks/drink-3-brown-sugar-pearl.png') },
   { id: 4, name: 'White Peach Oolong Tea', price: 12.9, category: 'Fruit Tea',
-    desc: 'White peach, roasted oolong', color: '#e8a0a8', bg: '#fbeeee' },
+    desc: 'White peach, roasted oolong', color: '#e8a0a8', bg: '#fbeeee',
+    image: require('../assets/drinks/drink-4-white-peach-oolong.png') },
   { id: 5, name: 'Mango Green Tea', price: 11.9, category: 'Fruit Tea',
-    desc: 'Fresh mango, jasmine green tea', color: '#f0a832', bg: '#fdf3dd' },
+    desc: 'Fresh mango, jasmine green tea', color: '#f0a832', bg: '#fdf3dd',
+    image: require('../assets/drinks/drink-5-mango-green-tea.png') },
   { id: 6, name: 'Roasted Oolong Milk Tea', price: 12.9, category: 'Milk Tea',
-    desc: 'Roasted oolong, fresh milk', color: '#a97c2f', bg: '#f5ead2' },
+    desc: 'Roasted oolong, fresh milk', color: '#a97c2f', bg: '#f5ead2',
+    image: require('../assets/drinks/drink-6-roasted-oolong.png') },
   { id: 7, name: 'Lemon Honey Black Tea', price: 10.9, category: 'Pure Tea',
-    desc: 'Lemon, honey, black tea', color: '#d9b23a', bg: '#fdf6da' },
+    desc: 'Lemon, honey, black tea', color: '#d9b23a', bg: '#fdf6da',
+    image: require('../assets/drinks/drink-7-lemon-honey.png') },
 ];
 
 export const STATUS_STEPS = ['Ordered', 'Preparing', 'Collection', 'Completed'];

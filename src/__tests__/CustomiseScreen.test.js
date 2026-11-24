@@ -16,6 +16,9 @@ const mockNavigate = jest.fn();
 const mockAddItem = jest.fn();
 
 // The drink id for the current test; each test can change it before render.
+// A test can also set mockDrink to a whole drink object (e.g. one with no
+// photo) instead of picking a built-in drink by id.
+let mockDrink = null;
 let mockDrinkId = 1;
 
 // Fake navigation: the screen only needs navigate(), and the route params
@@ -24,7 +27,11 @@ let mockDrinkId = 1;
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
   useRoute: () => ({
-    params: { drink: require('../data').DRINKS.find((d) => d.id === mockDrinkId) },
+    params: {
+      drink:
+        mockDrink ||
+        require('../data').DRINKS.find((d) => d.id === mockDrinkId),
+    },
   }),
 }));
 
@@ -38,6 +45,7 @@ import CustomiseScreen from '../screens/CustomiseScreen';
 beforeEach(() => {
   mockNavigate.mockClear();
   mockAddItem.mockClear();
+  mockDrink = null;
   mockDrinkId = 1;
 });
 
@@ -47,6 +55,28 @@ describe('CustomiseScreen', () => {
     render(<CustomiseScreen />);
     expect(screen.getByText('Jasmine Matcha Pure Tea')).toBeOnTheScreen();
     expect(screen.getByText('RM 11.90')).toBeOnTheScreen();
+  });
+
+  // The drink photo is shown at the top.
+  test('shows the drink photo', () => {
+    render(<CustomiseScreen />);
+    expect(screen.getByTestId('drink-photo')).toBeOnTheScreen();
+  });
+
+  // A drink with no photo shows no photo (only the coloured background).
+  test('a drink without a photo shows no photo', () => {
+    mockDrink = {
+      id: 99,
+      name: 'Plain Tea',
+      price: 9.9,
+      category: 'Pure Tea',
+      desc: 'No photo',
+      color: '#000000',
+      bg: '#ffffff',
+    };
+    render(<CustomiseScreen />);
+    expect(screen.getByText('Plain Tea')).toBeOnTheScreen();
+    expect(screen.queryByTestId('drink-photo')).toBeNull();
   });
 
   // All three option groups are shown: size, ice, and sweetness.
