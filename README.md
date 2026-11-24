@@ -79,7 +79,7 @@ npm test
 ```
 
 The full suite takes about 30 seconds (most of it is the component
-tests starting up React Native). What is covered (44 tests in
+tests starting up React Native). What is covered (63 tests in
 `src/__tests__/`):
 
 - `pricing.test.js` — Regular vs Large prices (+RM 2.00), `money()`
@@ -102,6 +102,34 @@ tests starting up React Native). What is covered (44 tests in
   "not configured", so the built-in menu is used), search filtering, the
   empty-search message, and tapping a drink card opening Customise with
   that drink.
+- `CartScreen.test.js` — the empty cart and its browse button, item lines
+  with name, options, quantity and line total, the + / − buttons asking
+  the cart to change the quantity (down to 0, which removes the line),
+  applying WELCOME50 (RM 11.90 → RM 5.95) including a lower-case code,
+  an invalid voucher showing an error and no discount, and placing the
+  order: it saves the order with the cart contents and totals, clears
+  the cart, and opens the Order screen, using the selected payment
+  method.
+- `OrderScreen.test.js` — the loading indicator, the pickup number,
+  Tea Leaves, the four status-tracker steps, the item, discount,
+  voucher, payment and order time, the "Order not found." state, the
+  simulate-advance button moving the status one step forward and saving
+  it, and a completed order showing ORDER COMPLETED with a dead button.
+- `OrdersScreen.test.js` — the loading indicator, two past orders with
+  different pickup numbers and statuses, the empty "No orders yet."
+  state, and tapping an order opening its details with that order's id.
+
+Coverage (`npx jest --coverage`, files touched by tests only):
+statements 65.43%, lines 68.6%, branches 53.67%, functions 67.56%.
+100%: Header, data, theme. CartScreen 95% statements / 97% lines,
+OrderScreen 97% / 100% lines, OrdersScreen 94% / 94% lines,
+CustomiseScreen 90% / 94% lines, pricing 93% / 100% lines,
+MenuScreen 54% / 57% lines. The real `orders.js` storage code is
+barely covered (2%) because the screen tests replace `../orders`
+with a fake — its Supabase and AsyncStorage paths are only checked
+by the pickup-number helper test. Cart/Order/Orders screens are
+tested through their screens, so `cart.js`, `supabase.js` and `App.js`
+have no tests of their own yet.
 
 To add a new test, create a file ending in `.test.js` inside
 `src/__tests__/` and run `npm test` — Jest picks it up automatically.
@@ -115,7 +143,13 @@ replace the cart with `jest.mock('../cart', ...)` and Supabase with
 orders tests use), then use `screen.getByText` / `fireEvent.press` to
 check what is shown and what happens on a tap. If a test needs a
 phone-only module such as AsyncStorage, `jest.setup.js` already replaces
-it with an in-memory mock.
+it with an in-memory mock. If a screen loads data through `../orders`,
+mock it the same way — but return wrapper functions
+(`saveOrder: (...args) => mockSaveOrder(...args)`) instead of the mock
+fn itself: the mock factory runs before the `const mockSaveOrder =
+jest.fn()` line (imports are hoisted above it), so returning the fn
+directly freezes it as `undefined` and the screen silently fails
+inside its own `try/catch`.
 
 The price maths lives in `src/pricing.js` on purpose: the Cart screen
 imports it, and the tests import the same functions, so a test failure
