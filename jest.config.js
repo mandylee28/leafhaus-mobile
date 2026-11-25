@@ -15,4 +15,16 @@ module.exports = {
     'node_modules/(?!(.pnpm|react-native|@react-native|@react-native-community|expo|@expo|@expo-google-fonts|react-navigation|@react-navigation|@sentry/react-native|native-base|standard-navigation|@testing-library))',
     'node_modules/react-native-reanimated/plugin/',
   ],
+  // Coverage gate: fail the run if any metric drops below 100%, so the
+  // 100% coverage the project holds is enforced (in CI, which runs with
+  // --coverage), not just reported. Plain `npm test` without --coverage
+  // is unaffected.
+  coverageThreshold: {
+    global: {
+      branches: 100,
+      functions: 100,
+      lines: 100,
+      statements: 100,
+    },
+  },
 };
