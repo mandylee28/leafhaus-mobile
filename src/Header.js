@@ -13,7 +13,7 @@ export default function Header({ title }) {
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <View style={styles.bar}>
-        <TouchableOpacity style={styles.side} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.side} testID="header-back" onPress={() => navigation.goBack()}>
           <Text style={styles.back}>‹ Back</Text>
         </TouchableOpacity>
         <Text style={styles.title}>{title}</Text>

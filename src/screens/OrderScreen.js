@@ -156,6 +156,7 @@ export default function OrderScreen() {
 
       <TouchableOpacity
         style={styles.detailsToggle}
+        testID="order-details-toggle"
         onPress={() => setDetailsOpen((open) => !open)}
       >
         <Text style={styles.detailsToggleText}>
