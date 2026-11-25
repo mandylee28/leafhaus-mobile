@@ -24,22 +24,23 @@ export default function Header({ title }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { backgroundColor: COLORS.cream2 },
+  safe: { backgroundColor: COLORS.cream, borderBottomWidth: 1, borderBottomColor: COLORS.line },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 12,
   },
   side: { width: 64 },
-  back: { color: COLORS.navy, fontWeight: '700', fontSize: 16 },
+  back: { color: COLORS.ink, fontWeight: '600', fontSize: 16 },
   title: {
     flex: 1,
-    color: COLORS.navy,
-    fontWeight: '700',
+    color: COLORS.ink,
+    fontWeight: '600',
     fontSize: 17,
     textAlign: 'center',
+    letterSpacing: 0.5,
   },
 });

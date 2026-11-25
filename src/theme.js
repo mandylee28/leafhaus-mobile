@@ -1,16 +1,19 @@
-// Leafhaus — shared theme (cream / gold / navy, same as the web app).
+// Leafhaus — shared theme: deep green + cream + gold.
+// Warm cream page, deep forest-green primary, muted antique-gold accent.
+// Same token names as before, so screens need only style changes,
+// not logic changes.
 
 export const COLORS = {
-  cream: '#f7efdd',
-  cream2: '#fffaf0',
-  gold: '#a97c2f',
-  goldSoft: '#c9a86a',
-  navy: '#1f3a5f',
-  navySoft: '#2c4a73',
-  ink: '#22303f',
-  muted: '#6b7280',
-  line: '#e7dcc3',
-  red: '#b42318',
-  green: '#1a7f37',
+  cream: '#f7f1e3',
+  cream2: '#fdfaf3',
+  gold: '#9c7c2e',
+  goldSoft: '#e6dcc3',
+  navy: '#1e3a2f',
+  navySoft: '#2e5244',
+  ink: '#201b14',
+  muted: '#8a8171',
+  line: '#e7dcc4',
+  red: '#b05545',
+  green: '#2f6b4f',
   white: '#ffffff',
 };
