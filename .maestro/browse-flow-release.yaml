@@ -1,0 +1,89 @@
+# Leafhaus — browse-only flow, RELEASE build. No order is placed and
+# nothing is written to the database, so it is safe to run any number
+# of times.
+#
+# What it does: menu loads, scrolls down to White Peach Oolong Tea, opens
+# its details, goes back to the menu, then opens the empty cart.
+#
+# RELEASE BUILD ONLY. Run this against a release build installed with:
+#   npx expo run:ios --configuration Release
+# A release build has the JS bundle embedded — no Metro, no dev launcher,
+# no developer-menu welcome modal — so the app opens straight to the
+# menu and this flow needs no deep link and no modal handling.
+#
+# TEXT MATCHING: Maestro matches an element's WHOLE text. A drink card
+# is one accessibility element whose text is the concatenation of its
+# children ("Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea, Jasmine
+# green tea with matcha, RM 11.90"), so a plain drink name never matches
+# anything. This flow therefore uses regex patterns (.*name.*) for text
+# checks and taps, and the full card string for the initial wait.
+# Photo testIDs (drink-photo-N) are NOT exposed to iOS accessibility,
+# so scrolling/tapping uses the drink name regex instead. Button and
+# input testIDs (header-back etc.) are kept — pressables ARE exposed.
+appId: com.leafhaus.app
+name: Browse flow (release) — menu, drink details, empty cart
+---
+# Release build: launchApp opens the app straight to the menu.
+# clearState reinstalls, which guarantees an empty cart.
+- launchApp:
+    clearState: true
+
+# Menu loads. Wait for the full first-card string (the card's whole
+# accessibility text, verified in the probe run's hierarchy dump).
+- extendedWaitUntil:
+    visible: "Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea, Jasmine green tea with matcha, RM 11.90"
+    timeout: 60000
+
+# Menu loads.
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"
+- takeScreenshot: menu
+
+# The Welcome offer banner sits at the very bottom of the menu, below
+# all 7 drinks — it is off-screen on first load, so scroll down to it
+# before checking it.
+- scrollUntilVisible:
+    element:
+      text: ".*Welcome offer.*"
+    direction: DOWN
+- assertVisible:
+    text: ".*Welcome offer.*"
+
+# Scroll back up to White Peach Oolong Tea and open its details.
+- scrollUntilVisible:
+    element:
+      text: ".*White Peach Oolong Tea.*"
+    direction: UP
+- tapOn:
+    text: ".*White Peach Oolong Tea.*"
+
+# Drink details, then back to the menu.
+- assertVisible:
+    text: ".*Customise Drink.*"
+- assertVisible:
+    text: ".*White Peach Oolong Tea.*"
+- takeScreenshot: customise-white-peach
+- tapOn:
+    id: "header-back"
+
+# Back on the menu. The menu was left scrolled down, so scroll back up
+# to the first drink before asserting it is visible.
+- scrollUntilVisible:
+    element:
+      text: ".*Jasmine Matcha Pure Tea.*"
+    direction: UP
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"
+
+# Empty cart state (the clearState launch guarantees an empty cart).
+- tapOn:
+    text: "Cart"
+- assertVisible:
+    text: ".*Your cart is empty.*"
+- takeScreenshot: cart-empty
+
+# Back to the menu.
+- tapOn:
+    text: "Browse the Menu"
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"

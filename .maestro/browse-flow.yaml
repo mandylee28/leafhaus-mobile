@@ -1,0 +1,78 @@
+# Leafhaus — browse-only flow. No order is placed and nothing is written
+# to the database, so it is safe to run any number of times.
+#
+# What it does: menu loads, scrolls down to White Peach Oolong Tea, opens
+# its details, goes back to the menu, then opens the empty cart.
+appId: com.leafhaus.app
+name: Browse flow — menu, drink details, empty cart
+---
+# The dev-client launcher: launchApp with clearState reinstalls the app on
+# iOS, which wipes the dev client's saved Metro URL — so the app always
+# lands on the launcher ("Development Build / DEVELOPMENT SERVERS") instead
+# of the menu. Load the bundle directly with the dev-client deep link
+# (scheme "leafhaus" from app.json). Metro must be running on port 8081
+# — exactly ONE Metro server; see .maestro/README.md.
+- launchApp:
+    clearState: true
+- openLink: leafhaus://expo-development-client/?url=http://localhost:8081
+
+# iOS may ask Open in "Leafhaus"? the first time a deep link is opened.
+# One-time, per-simulator prompt — skipped automatically when it is absent.
+- runFlow:
+    when:
+      visible: 'Open in "Leafhaus"'
+    commands:
+      - tapOn: Open
+
+# A fresh install shows the developer-menu welcome modal over the menu on
+# first launch ("This is the developer menu" + a Continue button). It
+# appears on every run because clearState reinstalls the app — but only
+# AFTER the bundle loads, so checking for it right after openLink is too
+# early and gets skipped. Wait for it to appear, then dismiss it.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 60000
+- tapOn: "Continue"
+
+# First bundle load can take a while (Maestro's default assert timeout
+# is only 7 seconds), so wait up to 60 seconds for the menu.
+- extendedWaitUntil:
+    visible: "Jasmine Matcha Pure Tea"
+    timeout: 60000
+
+# Menu loads.
+- assertVisible: "Jasmine Matcha Pure Tea"
+- assertVisible: "Welcome offer"
+- takeScreenshot: menu
+
+# Scroll down to the lower rows of the menu and open White Peach Oolong Tea.
+- scrollUntilVisible:
+    element:
+      id: "drink-photo-4"
+    direction: DOWN
+- tapOn:
+    id: "drink-photo-4"
+
+# Drink details, then back to the menu.
+- assertVisible: "Customise Drink"
+- assertVisible: "White Peach Oolong Tea"
+- takeScreenshot: customise-white-peach
+- tapOn:
+    id: "header-back"
+
+# Back on the menu. The menu was left scrolled down, so scroll back up
+# to the first drink before asserting it is visible.
+- scrollUntilVisible:
+    element:
+      id: "drink-photo-1"
+    direction: UP
+- assertVisible: "Jasmine Matcha Pure Tea"
+
+# Empty cart state (the clearState launch guarantees an empty cart).
+- tapOn: "Cart"
+- assertVisible: "Your cart is empty."
+- takeScreenshot: cart-empty
+
+# Back to the menu.
+- tapOn: "Browse the Menu"
+- assertVisible: "Jasmine Matcha Pure Tea"

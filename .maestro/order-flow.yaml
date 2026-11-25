@@ -1,0 +1,109 @@
+# Leafhaus — end-to-end order flow (iOS Simulator + development build).
+#
+# What it does: opens the menu, customises Jasmine Matcha Pure Tea
+# (Large, No Ice, No Sugar), adds it to the cart, applies voucher TEA20,
+# places the order, and checks the order confirmation screen.
+#
+# WARNING — this places a REAL order in the live Supabase database
+# (one row in orders + one row in order_items). After the run, delete the
+# test order in the Supabase dashboard: Table Editor > orders, delete the
+# row with the pickup number shown on the confirmation screen, and its
+# matching row in order_items. The next order placed will reuse the same
+# pickup number.
+#
+# Prices in this flow (from src/pricing.js, verified against the app):
+#   Jasmine Matcha Pure Tea Large = RM 11.90 + RM 2.00 = RM 13.90
+#   TEA20 = 20% off -> discount RM 2.78, total RM 11.12
+#   15 Tea Leaves per order.
+appId: com.leafhaus.app
+name: Order flow — Jasmine Matcha Pure Tea, Large, TEA20
+---
+# The dev-client launcher: launchApp with clearState reinstalls the app on
+# iOS, which wipes the dev client's saved Metro URL — so the app always
+# lands on the launcher ("Development Build / DEVELOPMENT SERVERS") instead
+# of the menu. Load the bundle directly with the dev-client deep link
+# (scheme "leafhaus" from app.json). Metro must be running on port 8081
+# — exactly ONE Metro server; see .maestro/README.md.
+- launchApp:
+    clearState: true
+- openLink: leafhaus://expo-development-client/?url=http://localhost:8081
+
+# iOS may ask Open in "Leafhaus"? the first time a deep link is opened.
+# One-time, per-simulator prompt — skipped automatically when it is absent.
+- runFlow:
+    when:
+      visible: 'Open in "Leafhaus"'
+    commands:
+      - tapOn: Open
+
+# A fresh install shows the developer-menu welcome modal over the menu on
+# first launch ("This is the developer menu" + a Continue button). It
+# appears on every run because clearState reinstalls the app — but only
+# AFTER the bundle loads, so checking for it right after openLink is too
+# early and gets skipped. Wait for it to appear, then dismiss it.
+- extendedWaitUntil:
+    visible: "This is the developer menu"
+    timeout: 60000
+- tapOn: "Continue"
+
+# First bundle load can take a while (Maestro's default assert timeout
+# is only 7 seconds), so wait up to 60 seconds for the menu.
+- extendedWaitUntil:
+    visible: "Jasmine Matcha Pure Tea"
+    timeout: 60000
+
+# Menu loads (built-in drinks show immediately; Supabase refreshes them)
+- assertVisible: "Jasmine Matcha Pure Tea"
+- takeScreenshot: menu
+
+# Open the drink. Tap its photo by testID: the card name text also exists
+# as the photo's accessibility label, so the testID is the unambiguous tap.
+- tapOn:
+    id: "drink-photo-1"
+
+# Customise. Defaults for this drink are Regular / Normal Ice / Less Sweet.
+- assertVisible: "Customise Drink"
+- assertVisible: "Jasmine Matcha Pure Tea"
+- takeScreenshot: customise
+- tapOn: "Large"
+- assertVisible: "Large is +RM 2.00"
+- tapOn: "No Ice"
+- tapOn: "No Sugar"
+- assertVisible: "Add to Cart · RM 13.90"
+- tapOn: "Add to Cart · RM 13.90"
+
+# Cart — the app navigates here automatically after adding to cart.
+- assertVisible: "Your Cart"
+- assertVisible: "Jasmine Matcha Pure Tea"
+- assertVisible: "Large, No Ice, No Sugar"
+- assertVisible: "RM 13.90"
+- takeScreenshot: cart
+
+# Voucher TEA20 (20% off): subtotal RM 13.90, discount RM 2.78, total RM 11.12.
+- tapOn:
+    id: "voucher-input"
+- inputText: "TEA20"
+- tapOn: "Apply"
+- assertVisible: "Voucher applied: 20% off."
+- assertVisible: "Total discount (TEA20)"
+- assertVisible: "Place Order · RM 11.12"
+
+# Place the order — this writes the REAL order to Supabase (see warning above).
+- tapOn: "Place Order · RM 11.12"
+
+# Order confirmation screen.
+- assertVisible: "Order Details"
+- assertVisible: "ORDER ORDERED"
+- assertVisible: "Pickup Number"
+- assertVisible:
+    text: "T0[0-9]{3}"
+- assertVisible: "15 Tea Leaves Earned!"
+- assertVisible: "TEA20"
+- takeScreenshot: order-confirmation
+
+# Open the folded details and check them.
+- tapOn:
+    id: "order-details-toggle"
+- assertVisible: "Order Time"
+- assertVisible: "Order Number"
+- takeScreenshot: order-details-open

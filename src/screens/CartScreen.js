@@ -104,7 +104,7 @@ export default function CartScreen() {
   return (
     <View style={styles.container}>
       <Header title="Your Cart" />
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {cart.map((item, i) => {
         const drink = DRINKS.find((d) => d.id === item.drinkId);
         const line = unitPrice(drink, item.size) * item.qty;
@@ -150,6 +150,7 @@ export default function CartScreen() {
       <View style={styles.voucherRow}>
         <TextInput
           style={styles.voucherInput}
+          testID="voucher-input"
           placeholder="Voucher code (e.g. WELCOME50)"
           value={voucherCode}
           onChangeText={setVoucherCode}

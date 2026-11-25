@@ -1,0 +1,128 @@
+# Leafhaus — end-to-end order flow, RELEASE build.
+#
+# What it does: opens the menu, customises Jasmine Matcha Pure Tea
+# (Large, No Ice, No Sugar), adds it to the cart, applies voucher TEA20,
+# places the order, and checks the order confirmation screen.
+#
+# RELEASE BUILD ONLY. Run this against a release build installed with:
+#   npx expo run:ios --configuration Release
+# A release build has the JS bundle embedded — no Metro, no dev launcher,
+# no developer-menu welcome modal — so the app opens straight to the
+# menu and this flow needs no deep link and no modal handling.
+#
+# TEXT MATCHING: Maestro matches an element's WHOLE text. A drink card
+# is one accessibility element whose text is the concatenation of its
+# children ("Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea, Jasmine
+# green tea with matcha, RM 11.90"), so a plain drink name never matches
+# anything. This flow therefore uses regex patterns (.*name.*) for text
+# checks and taps, and the full card string for the initial wait.
+# Photo testIDs (drink-photo-N) are NOT exposed to iOS accessibility,
+# so tapping a drink uses the drink name regex instead. Button and input
+# testIDs (voucher-input, order-details-toggle) are kept — pressables and
+# inputs ARE exposed.
+#
+# WARNING — this places a REAL order in the live Supabase database
+# (one row in orders + one row in order_items). After the run, delete the
+# test order in the Supabase dashboard: Table Editor > orders, delete the
+# row with the pickup number shown on the confirmation screen, and its
+# matching row in order_items. The next order placed will reuse the same
+# pickup number.
+#
+# Prices in this flow (from src/pricing.js, verified against the app):
+#   Jasmine Matcha Pure Tea Large = RM 11.90 + RM 2.00 = RM 13.90
+#   TEA20 = 20% off -> discount RM 2.78, total RM 11.12
+#   15 Tea Leaves per order.
+appId: com.leafhaus.app
+name: Order flow (release) — Jasmine Matcha Pure Tea, Large, TEA20
+---
+# Release build: launchApp opens the app straight to the menu.
+# clearState reinstalls, which guarantees an empty cart.
+- launchApp:
+    clearState: true
+
+# Menu loads. Wait for the full first-card string (the card's whole
+# accessibility text, verified in the probe run's hierarchy dump).
+- extendedWaitUntil:
+    visible: "Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea, Jasmine green tea with matcha, RM 11.90"
+    timeout: 60000
+
+# Menu loads (built-in drinks show immediately; Supabase refreshes them)
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"
+- takeScreenshot: menu
+
+# Open the drink by its name regex: the card name text also exists as
+# the photo's accessibility label, so the regex matches the card.
+- tapOn:
+    text: ".*Jasmine Matcha Pure Tea.*"
+
+# Customise. Defaults for this drink are Regular / Normal Ice / Less Sweet.
+- assertVisible:
+    text: ".*Customise Drink.*"
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"
+- takeScreenshot: customise
+- tapOn:
+    text: "Large"
+- assertVisible:
+    text: ".*Large is \\+RM 2\\.00.*"
+- tapOn:
+    text: "No Ice"
+- tapOn:
+    text: "No Sugar"
+- assertVisible:
+    text: ".*Add to Cart · RM 13\\.90.*"
+- tapOn:
+    text: "Add to Cart · RM 13\\.90"
+
+# Cart — the app navigates here automatically after adding to cart.
+- assertVisible:
+    text: ".*Your Cart.*"
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"
+- assertVisible:
+    text: ".*Large, No Ice, No Sugar.*"
+- assertVisible:
+    text: ".*RM 13\\.90.*"
+- takeScreenshot: cart
+
+# Voucher TEA20 (20% off): subtotal RM 13.90, discount RM 2.78, total RM 11.12.
+- tapOn:
+    id: "voucher-input"
+- inputText: "TEA20"
+- tapOn:
+    text: "Apply"
+- assertVisible:
+    text: ".*Voucher applied: 20% off\\..*"
+- assertVisible:
+    text: ".*Total discount \\(TEA20\\).*"
+- assertVisible:
+    text: ".*Place Order · RM 11\\.12.*"
+
+# Place the order — this writes the REAL order to Supabase (see warning above).
+- tapOn:
+    text: "Place Order · RM 11\\.12"
+
+# Order confirmation screen.
+- assertVisible:
+    text: ".*Order Details.*"
+- assertVisible:
+    text: ".*ORDER ORDERED.*"
+- assertVisible:
+    text: ".*Pickup Number.*"
+- assertVisible:
+    text: "T0[0-9]{3}"
+- assertVisible:
+    text: ".*15 Tea Leaves Earned!.*"
+- assertVisible:
+    text: ".*TEA20.*"
+- takeScreenshot: order-confirmation
+
+# Open the folded details and check them.
+- tapOn:
+    id: "order-details-toggle"
+- assertVisible:
+    text: ".*Order Time.*"
+- assertVisible:
+    text: ".*Order Number.*"
+- takeScreenshot: order-details-open

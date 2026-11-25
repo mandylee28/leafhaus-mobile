@@ -5,6 +5,7 @@
     "@react-navigation/native-stack": "^6.11.0",
     "@supabase/supabase-js": "^2.45.0",
     "expo": "^58.0.0",
+    "expo-dev-client": "~58.0.21",
     "react": "19.3.0",
     "react-native": "0.88.1",
     "react-native-safe-area-context": "~5.11.1",
@@ -22,8 +23,8 @@
   "name": "leafhaus",
   "private": true,
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "start": "expo start",
     "web": "expo start --web",
     "test": "jest"

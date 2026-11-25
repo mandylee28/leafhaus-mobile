@@ -1,0 +1,38 @@
+# Leafhaus — diagnostic probe, RELEASE build only.
+#
+# Purpose: find out exactly what Maestro can and cannot see in this app.
+# The release browse flow fails on the very first text check even though
+# the menu is fully rendered with no modal — so this probe tests, in one
+# run, whether id-based checks work and whether text checks work at all.
+#
+# How to read the result (first failing step tells the story):
+#   - fails at "drink-photo-1" id check  -> Maestro cannot see this app's
+#     elements as visible at all (driver / iOS issue, not a text issue)
+#   - passes id check, fails "Customise Drink" text check -> id works,
+#     text checks are broken everywhere; flows must use testIDs only
+#   - passes both, fails the final "Jasmine Matcha Pure Tea" text check
+#     -> text works except for the menu drink name, which exists twice
+#     in the hierarchy (photo accessibility label + name text)
+#   - everything passes -> text checks work here and the menu failure
+#     was something else; re-run the release browse flow
+appId: com.leafhaus.app
+name: Probe — id check, text check, text tap
+---
+- launchApp:
+    clearState: true
+
+# 1. Unambiguous id check: the first drink's photo (testID drink-photo-1).
+- assertVisible:
+    id: "drink-photo-1"
+
+# 2. Open the drink by its photo id, then a text check on a title that
+# appears exactly once on the Customise screen.
+- tapOn:
+    id: "drink-photo-1"
+- assertVisible: "Customise Drink"
+
+# 3. Back to the menu by id, then the menu drink-name text check — the
+# one that keeps failing (name exists twice: photo label + name text).
+- tapOn:
+    id: "header-back"
+- assertVisible: "Jasmine Matcha Pure Tea"

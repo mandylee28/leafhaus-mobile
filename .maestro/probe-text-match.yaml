@@ -1,0 +1,29 @@
+# Leafhaus — diagnostic probe, RELEASE build only.
+#
+# Purpose: find out how Maestro matches text in this app.
+# The menu card's accessibility text is the CONCATENATION of its
+# children (seen in the probe run's hierarchy dump):
+#   "Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea,
+#    Jasmine green tea with matcha, RM 11.90"
+# So no element's text exactly equals "Jasmine Matcha Pure Tea".
+#
+# How to read the result:
+#   - step 1 passes, step 2 passes -> Maestro accepts regex; rewrite
+#     the flows with regex text patterns (.*name.*)
+#   - step 1 passes, step 2 fails  -> only literal exact full-string
+#     matching works; rewrite the flows with the full concatenated
+#     strings
+#   - step 1 fails -> neither exact-full nor (untested) regex works;
+#     the problem is visibility after all, not matching
+appId: com.leafhaus.app
+name: Probe — exact full text vs regex
+---
+- launchApp:
+    clearState: true
+
+# 1. Exact full string: the card's whole accessibility text.
+- assertVisible: "Jasmine Matcha Pure Tea, Jasmine Matcha Pure Tea, Jasmine green tea with matcha, RM 11.90"
+
+# 2. Regex: matches if Maestro treats text as a regex (full match).
+- assertVisible:
+    text: ".*Jasmine Matcha Pure Tea.*"

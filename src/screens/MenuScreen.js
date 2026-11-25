@@ -107,8 +107,8 @@ export default function MenuScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeRow}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeRow} keyboardShouldPersistTaps="handled">
         {stores.map((s) => (
           <TouchableOpacity
             key={s}
@@ -130,7 +130,7 @@ export default function MenuScreen() {
         clearButtonMode="while-editing"
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} keyboardShouldPersistTaps="handled">
         {CATEGORIES.map((c) => (
           <TouchableOpacity
             key={c}
