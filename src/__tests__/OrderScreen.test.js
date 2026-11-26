@@ -86,6 +86,10 @@ beforeEach(() => {
 
 describe('OrderScreen', () => {
   // While the order is loading, the spinner shows and no order content yet.
+  // Timeout 10s, not Jest's 5s default: this test alone takes ~4.3s, and
+  // a cold CI run failed it at the 5s limit (26 Nov 2026, commit f0b26b1).
+  // It is timing-flaky, not a regression — the render it waits for is the
+  // same on every run, cold machines are just slower to get there.
   test('shows a loading indicator while the order loads', async () => {
     let resolveFetch;
     mockFetchOrder.mockImplementation(
@@ -96,7 +100,7 @@ describe('OrderScreen', () => {
     expect(screen.queryByText('T0201')).toBeNull();
     resolveFetch(placedOrder);
     await screen.findByText('T0201');
-  });
+  }, 10000);
 
   // The details screen shows the pickup number, Tea Leaves, the tracker,
   // the item, the discount and voucher, and the payment. Order time and
