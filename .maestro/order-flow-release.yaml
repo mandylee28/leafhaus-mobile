@@ -100,6 +100,14 @@ name: Order flow (release) — Jasmine Matcha Pure Tea, Large, TEA20
     text: ".*Place Order · RM 11\\.12.*"
 
 # Place the order — this writes the REAL order to Supabase (see warning above).
+# The keyboard is still up from the voucher input and covers the Place Order
+# button at the bottom of the cart: Maestro finds the button in the
+# hierarchy and taps its coordinates, but the tap lands on the keyboard
+# and nothing happens (failed 26 Nov 2026: "Order Details" assert after
+# the tap, cart still showing with the keyboard open). Dismiss it first.
+# NOTE: assertVisible above cannot catch this — the button is "visible"
+# in the hierarchy even while covered by the keyboard.
+- hideKeyboard
 - tapOn:
     text: "Place Order · RM 11\\.12"
 

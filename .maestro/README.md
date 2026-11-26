@@ -134,7 +134,10 @@ of times.
 - `order-flow-release.yaml` — Jasmine Matcha Pure Tea, Large, No Ice, No
   Sugar, TEA20 (RM13.90 → RM11.12), order confirmation, details toggle.
   All green 25 Nov 2026; order verified in Supabase (T0204, RM11.12,
-  TEA20, Touch 'n Go, 15 leaves, Horizon Mall).
+  TEA20, Touch 'n Go, 15 leaves, Horizon Mall). Since 26 Nov 2026 the
+  flow hides the keyboard before tapping Place Order — the keyboard
+  from the voucher input covers that bottom button, so the tap landed
+  on the keyboard and the order was never placed.
 - `browse-flow.yaml`, `order-flow.yaml` — dev-build variants (deep link +
   welcome-modal handling). Not the working path; kept as fallback.
 - `probe-text-match.yaml`, `probe-visibility.yaml` — one-off probes from
