@@ -8,6 +8,16 @@ export const STORES = [
   'Leafhaus MY Aeon Bukit Indah',
 ];
 
+// Markets (countries) the app serves. Only Malaysia has stores so far;
+// Singapore is listed as coming soon.
+export const MARKETS = [
+  { id: 'MY', name: 'Malaysia', flag: '🇲🇾', comingSoon: false, stores: STORES },
+  { id: 'SG', name: 'Singapore', flag: '🇸🇬', comingSoon: true, stores: [] },
+];
+
+export const DEFAULT_MARKET_ID = 'MY';
+export const MARKET_STORAGE_KEY = 'leafhaus_market_v1';
+
 export const CATEGORIES = ['All', 'Milk Tea', 'Pure Tea', 'Fruit Tea', 'Matcha'];
 
 export const VOUCHERS = {

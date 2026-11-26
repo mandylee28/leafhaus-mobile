@@ -26,7 +26,10 @@ const oneItem = [
 let mockCart = [];
 let mockStore = 'Leafhaus MY Horizon Mall';
 
-// Fake navigation: the screen only navigates to Menu and Order.
+// The market for the current test: Malaysia unless a test switches it.
+let mockMarket = null;
+
+// Fake navigation: the screen navigates to the Home tab's Menu and to Order.
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
 }));
@@ -39,6 +42,11 @@ jest.mock('../cart', () => ({
     clearCart: mockClearCart,
     store: mockStore,
   }),
+}));
+
+// Fake market: the screen reads the market's stores.
+jest.mock('../market', () => ({
+  useMarket: () => ({ market: mockMarket }),
 }));
 
 // Fake order store: placing an order returns a saved order id.
@@ -70,7 +78,7 @@ jest.mock('../data', () => {
 });
 
 import CartScreen from '../screens/CartScreen';
-import { DRINKS } from '../data';
+import { DRINKS, MARKETS } from '../data';
 
 beforeEach(() => {
   mockNavigate.mockClear();
@@ -81,6 +89,7 @@ beforeEach(() => {
   alertSpy.mockClear();
   mockCart = [];
   mockStore = 'Leafhaus MY Horizon Mall';
+  mockMarket = MARKETS[0];
 });
 
 describe('CartScreen', () => {
@@ -92,11 +101,12 @@ describe('CartScreen', () => {
     expect(screen.queryByText(/Place Order/)).toBeNull();
   });
 
-  // The browse button goes back to the Menu screen.
+  // The browse button goes back to the Menu screen, which lives on the
+  // Home tab — so it navigates to the Home tab's Menu screen.
   test('Browse the Menu navigates to the Menu', () => {
     render(<CartScreen />);
     fireEvent.press(screen.getByText('Browse the Menu'));
-    expect(mockNavigate).toHaveBeenCalledWith('Menu');
+    expect(mockNavigate).toHaveBeenCalledWith('Home', { screen: 'Menu' });
   });
 
   // Item lines show the drink name, options, quantity and line total,
@@ -307,5 +317,20 @@ describe('CartScreen', () => {
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('Order', { orderId: 'ORD-1' });
     });
+  });
+
+  // Singapore has no stores yet: the note is shown and Place Order is
+  // disabled, so no order can be placed for Singapore.
+  test('Singapore shows a note and disables Place Order', () => {
+    mockCart = [...oneItem];
+    mockMarket = MARKETS[1];
+    const { UNSAFE_getAllByType } = render(<CartScreen />);
+    expect(
+      screen.getByText(/No stores in Singapore yet/)
+    ).toBeOnTheScreen();
+    const placeButton = UNSAFE_getAllByType(TouchableOpacity).find(
+      (el) => el.props.disabled === true
+    );
+    expect(placeButton).toBeTruthy();
   });
 });

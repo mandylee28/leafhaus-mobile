@@ -1,5 +1,8 @@
 // Leafhaus — Cart / Checkout screen: quantity editing, voucher, payment,
 // place order (Supabase, or AsyncStorage when not configured).
+//
+// The store follows the market (Malaysia or Singapore). Singapore has no
+// stores yet, so ordering is disabled there until stores open.
 
 import React, { useState } from 'react';
 import {
@@ -16,19 +19,25 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../theme';
 import Header from '../Header';
-import { DRINKS, LEAVES_PER_ORDER, STORES, money } from '../data';
+import { DRINKS, LEAVES_PER_ORDER, money } from '../data';
 import { useCart } from '../cart';
+import { useMarket } from '../market';
 import { saveOrder } from '../orders';
 import { calcTotals, unitPrice, voucherRate } from '../pricing';
 
 export default function CartScreen() {
   const navigation = useNavigation();
   const { cart, setQty, clearCart, store } = useCart();
+  const { market } = useMarket();
   const [voucherCode, setVoucherCode] = useState('');
   const [voucher, setVoucher] = useState(null); // { code, rate }
   const [voucherMsg, setVoucherMsg] = useState('');
   const [payment, setPayment] = useState("Touch 'n Go");
   const [placing, setPlacing] = useState(false);
+
+  // The store follows the market; Singapore has no stores yet.
+  const marketStores = market.stores;
+  const canOrder = marketStores.length > 0;
 
   // The maths lives in src/pricing.js so it can be unit-tested directly.
   const { subtotal, discount, total } = calcTotals(
@@ -55,7 +64,7 @@ export default function CartScreen() {
     try {
       const order = await saveOrder({
         orderNumber: String(Date.now()).slice(-12),
-        store: store || STORES[0],
+        store: marketStores.includes(store) ? store : marketStores[0],
         items: cart.map((item) => {
           const drink = DRINKS.find((d) => d.id === item.drinkId);
           return {
@@ -93,7 +102,7 @@ export default function CartScreen() {
         <Header title="Your Cart" />
         <View style={styles.emptyWrap}>
           <Text style={styles.empty}>Your cart is empty.</Text>
-          <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('Menu')}>
+          <TouchableOpacity style={styles.primary} onPress={() => navigation.navigate('Home', { screen: 'Menu' })}>
             <Text style={styles.primaryText}>Browse the Menu</Text>
           </TouchableOpacity>
         </View>
@@ -194,10 +203,16 @@ export default function CartScreen() {
         </View>
       </View>
 
+      {!canOrder ? (
+        <Text style={styles.comingSoonNote}>
+          No stores in Singapore yet — switch back to Malaysia in the Me tab to order.
+        </Text>
+      ) : null}
+
       <TouchableOpacity
         style={[styles.primary, placing && styles.primaryDisabled]}
         onPress={placeOrder}
-        disabled={placing}
+        disabled={placing || !canOrder}
       >
         {placing ? (
           <ActivityIndicator color="#fff" />
@@ -299,6 +314,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: { fontWeight: '700', color: COLORS.navy, fontSize: 17 },
   discount: { color: COLORS.red },
+  comingSoonNote: { color: COLORS.muted, marginTop: 16, textAlign: 'center' },
   primary: {
     backgroundColor: COLORS.navy,
     borderRadius: 12,

@@ -1,23 +1,30 @@
 // Component tests for the menu screen (src/screens/MenuScreen.js):
-// the 7-drink menu, search, and category chips.
-// The screen reads the cart from context and the menu from Supabase when
-// configured, so both are faked here: the cart is empty, and Supabase is
-// replaced with "not configured" — exactly the local-mode fallback the
-// app uses without a .env, so the built-in menu data is shown and no
-// network is touched. Run them with: npm test
+// the 7-drink menu, search, category chips, and the Singapore
+// coming-soon state.
+// The screen reads the cart and the market from context and the menu
+// from Supabase when configured, so all three are faked here: the cart
+// is empty, the market is Malaysia, and Supabase is replaced with "not
+// configured" — exactly the local-mode fallback the app uses without a
+// .env, so the built-in menu data is shown and no network is touched.
+// Run them with: npm test
 
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { DRINKS } from '../data';
+import { DRINKS, MARKETS } from '../data';
 
 const mockNavigate = jest.fn();
 const mockSetStore = jest.fn();
+const mockSetMarket = jest.fn();
 
 // The cart contents and the picked store for the current test.
 let mockCart = [];
 let mockStore = null;
 
-// Fake navigation: the screen only navigates to Orders, Cart, Customise.
+// The market for the current test: Malaysia unless a test switches it.
+let mockMarket = MARKETS[0];
+
+// Fake navigation: the screen only navigates to Customise now — the
+// order history and the cart live on the bottom tabs.
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
 }));
@@ -25,6 +32,11 @@ jest.mock('@react-navigation/native', () => ({
 // Fake cart: the screen reads cart/store and calls setStore.
 jest.mock('../cart', () => ({
   useCart: () => ({ cart: mockCart, store: mockStore, setStore: mockSetStore }),
+}));
+
+// Fake market: the screen reads the market and calls setMarket.
+jest.mock('../market', () => ({
+  useMarket: () => ({ market: mockMarket, setMarket: mockSetMarket }),
 }));
 
 // Fake Supabase as "not configured" by default, like the app without a
@@ -44,8 +56,10 @@ const mockSupabase = jest.requireMock('../supabase');
 beforeEach(() => {
   mockNavigate.mockClear();
   mockSetStore.mockClear();
+  mockSetMarket.mockClear();
   mockCart = [];
   mockStore = null;
+  mockMarket = MARKETS[0];
   mockSupabase.isSupabaseConfigured = false;
   mockSupabase.supabase = null;
 });
@@ -139,23 +153,39 @@ describe('MenuScreen', () => {
     expect(mockSetStore).toHaveBeenCalledWith('Leafhaus MY Eco Botanic');
   });
 
-  // The top bar buttons open My Orders and the Cart.
-  test('My Orders and Cart buttons navigate', () => {
+  // The picked store's chip shows as selected.
+  test('the picked store chip shows as selected', () => {
+    mockStore = 'Leafhaus MY Horizon Mall';
     render(<MenuScreen />);
-    fireEvent.press(screen.getByText('My Orders'));
-    expect(mockNavigate).toHaveBeenCalledWith('Orders');
-    fireEvent.press(screen.getByText('Cart'));
-    expect(mockNavigate).toHaveBeenCalledWith('Cart');
+    const chip = screen.getByText('Horizon Mall').parent;
+    expect(chip.props.style[1]).toBeTruthy();
   });
 
-  // With items in the cart, the Cart button shows the total count.
-  test('the Cart button shows the item count', () => {
-    mockCart = [
-      { drinkId: 1, size: 'Regular', ice: 'Normal Ice', sweet: 'Less Sweet', qty: 2 },
-      { drinkId: 5, size: 'Regular', ice: 'Normal Ice', sweet: 'Less Sweet', qty: 1 },
-    ];
+  // The top bar is just the brand now — My Orders and the Cart live on
+  // the bottom tabs, so they are not on this screen any more.
+  test('the top bar has no My Orders or Cart button', () => {
     render(<MenuScreen />);
-    expect(screen.getByText('Cart (3)')).toBeOnTheScreen();
+    expect(screen.queryByText('My Orders')).toBeNull();
+    expect(screen.queryByText('Cart')).toBeNull();
+  });
+
+  // Singapore has no stores yet: the menu is replaced by a coming-soon
+  // card instead of the drink list.
+  test('Singapore shows a coming-soon card instead of the menu', () => {
+    mockMarket = MARKETS[1];
+    render(<MenuScreen />);
+    expect(screen.getByText(/Singapore — Coming soon/)).toBeOnTheScreen();
+    expect(screen.queryByText('Jasmine Matcha Pure Tea')).toBeNull();
+    expect(screen.queryByPlaceholderText('Search drinks…')).toBeNull();
+  });
+
+  // The coming-soon card offers a way back to the Malaysia menu.
+  test('the coming-soon card switches back to Malaysia', () => {
+    mockMarket = MARKETS[1];
+    render(<MenuScreen />);
+    fireEvent.press(screen.getByText('Browse Malaysia stores'));
+    expect(mockSetMarket).toHaveBeenCalledTimes(1);
+    expect(mockSetMarket).toHaveBeenCalledWith('MY');
   });
 });
 

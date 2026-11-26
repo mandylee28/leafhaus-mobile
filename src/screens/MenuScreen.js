@@ -1,4 +1,8 @@
 // Leafhaus — Menu screen: store picker, search, category chips, drink menu.
+//
+// Stores follow the market (Malaysia or Singapore) from the market
+// provider. Only Malaysia has stores so far — Singapore shows a
+// coming-soon card instead of the menu.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -16,10 +20,12 @@ import { COLORS } from '../theme';
 import { CATEGORIES, DRINKS, STORES, VOUCHERS, money } from '../data';
 import { isSupabaseConfigured, supabase } from '../supabase';
 import { useCart } from '../cart';
+import { useMarket } from '../market';
 
 export default function MenuScreen() {
   const navigation = useNavigation();
-  const { cart, store, setStore } = useCart();
+  const { store, setStore } = useCart();
+  const { market, setMarket } = useMarket();
   const [stores, setStores] = useState(STORES);
   const [drinks, setDrinks] = useState(DRINKS);
   const [vouchers, setVouchers] = useState(VOUCHERS);
@@ -27,7 +33,11 @@ export default function MenuScreen() {
   const [category, setCategory] = useState('All');
   const [dbStatus, setDbStatus] = useState('Checking database connection…');
 
-  const activeStore = store || STORES[0];
+  // Only Malaysia has stores so far; Singapore shows a coming-soon card.
+  const marketStores = market.id === 'MY' ? stores : [];
+  const activeStore = marketStores.includes(store)
+    ? store
+    : marketStores[0];
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -79,7 +89,6 @@ export default function MenuScreen() {
     })();
   }, []);
 
-  const cartCount = cart.reduce((n, item) => n + item.qty, 0);
   const q = query.trim().toLowerCase();
   const visible = drinks.filter((d) => {
     const inCategory = category === 'All' || d.category === category;
@@ -93,25 +102,32 @@ export default function MenuScreen() {
       <SafeAreaView edges={['top']} style={styles.topSafe}>
         <View style={styles.topBar}>
           <Text style={styles.brand}>🍃 Leafhaus</Text>
-          <View style={styles.topButtons}>
-            <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
-              <Text style={styles.topButton}>My Orders</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cartButton}
-              onPress={() => navigation.navigate('Cart')}
-            >
-              <Text style={styles.cartButtonText}>
-                Cart{cartCount > 0 ? ` (${cartCount})` : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </SafeAreaView>
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      {market.comingSoon ? (
+        <View style={styles.comingSoon}>
+          <Text style={styles.comingSoonTitle}>
+            {market.flag} {market.name} — Coming soon
+          </Text>
+          <Text style={styles.comingSoonText}>
+            Leafhaus stores are on their way to Singapore. Browse the
+            Malaysia menu for now.
+          </Text>
+          <TouchableOpacity
+            style={styles.comingSoonButton}
+            onPress={() => setMarket('MY')}
+          >
+            <Text style={styles.comingSoonButtonText}>
+              Browse Malaysia stores
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.storeRow} keyboardShouldPersistTaps="handled">
-        {stores.map((s) => (
+        {marketStores.map((s) => (
           <TouchableOpacity
             key={s}
             style={[styles.storeChip, s === activeStore && styles.storeChipSelected]}
@@ -183,6 +199,8 @@ export default function MenuScreen() {
       <Text style={styles.voucherHint}>
         Vouchers: {Object.keys(vouchers).join(' · ')}
       </Text>
+        </>
+      )}
       </ScrollView>
     </View>
   );
@@ -204,15 +222,24 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.line,
   },
   brand: { fontSize: 22, fontWeight: '700', color: COLORS.navy, letterSpacing: 0.5 },
-  topButtons: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  topButton: { color: COLORS.navy, fontWeight: '600' },
-  cartButton: {
+  comingSoon: {
+    backgroundColor: COLORS.cream2,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    borderRadius: 12,
+    padding: 20,
+    marginTop: 12,
+  },
+  comingSoonTitle: { fontSize: 18, fontWeight: '700', color: COLORS.navy },
+  comingSoonText: { color: COLORS.muted, marginTop: 8 },
+  comingSoonButton: {
     backgroundColor: COLORS.navy,
     borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    padding: 14,
+    alignItems: 'center',
+    marginTop: 16,
   },
-  cartButtonText: { color: '#fff', fontWeight: '700' },
+  comingSoonButtonText: { color: '#fff', fontWeight: '700' },
   storeRow: { flexGrow: 0, marginBottom: 10 },
   storeChip: {
     borderWidth: 1,

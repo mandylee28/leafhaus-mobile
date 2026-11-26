@@ -1,12 +1,12 @@
-// Tests for App.js: the app renders with its navigation stack and opens
-// on the Menu screen. Run them with: npm test
+// Tests for App.js: the app renders with its bottom tabs and opens on
+// the Menu screen. Run them with: npm test
 //
 // This renders the real App — the real navigation container, the real
-// native-stack navigator and the real Menu screen — with only Supabase
-// faked as "not configured", so the menu uses the built-in drinks and no
-// network is touched. The other screens are not mounted: the stack only
-// renders the focused screen (Menu), so Customise/Cart/Order/Orders
-// never load here.
+// tab navigator and the real Menu screen — with only Supabase faked as
+// "not configured", so the menu uses the built-in drinks and no network
+// is touched. The other tabs mount when first pressed: the cup tab shows
+// the cart, the Orders tab shows the order history, and the Me tab shows
+// the Me screen.
 
 // Fake Supabase as "not configured", like the app without a .env.
 jest.mock('../supabase', () => ({
@@ -66,7 +66,7 @@ jest.mock('react-native-screens', () => {
 });
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import App from '../../App';
 
 describe('App', () => {
@@ -82,9 +82,44 @@ describe('App', () => {
     ).toBeOnTheScreen();
   });
 
-  // The top bar offers the way into the order history.
-  test('the Menu top bar shows My Orders', async () => {
+  // The tab bar shows the four tabs: Home, the cup tab, Orders and Me.
+  test('the tab bar shows Home, the cup tab, Orders and Me', async () => {
     render(<App />);
+    expect(await screen.findByTestId('tab-home')).toBeOnTheScreen();
+    expect(screen.getByTestId('tab-order')).toBeOnTheScreen();
+    expect(screen.getByTestId('tab-orders')).toBeOnTheScreen();
+    expect(screen.getByTestId('tab-me')).toBeOnTheScreen();
+  });
+
+  // The cup tab is the order in progress: it opens the cart.
+  test('tapping the cup tab opens the cart', async () => {
+    render(<App />);
+    fireEvent.press(screen.getByTestId('tab-order'));
+    expect(await screen.findByText('Your cart is empty.')).toBeOnTheScreen();
+  });
+
+  // The Orders tab opens the order history.
+  test('tapping the Orders tab opens the order history', async () => {
+    render(<App />);
+    fireEvent.press(screen.getByTestId('tab-orders'));
     expect(await screen.findByText('My Orders')).toBeOnTheScreen();
+  });
+
+  // The Me tab opens the Me screen.
+  test('tapping the Me tab opens the Me screen', async () => {
+    render(<App />);
+    fireEvent.press(screen.getByTestId('tab-me'));
+    expect(await screen.findByText('MY ACCOUNT')).toBeOnTheScreen();
+  });
+
+  // Tapping Home again returns to the menu.
+  test('tapping Home returns to the menu', async () => {
+    render(<App />);
+    fireEvent.press(screen.getByTestId('tab-me'));
+    expect(await screen.findByText('MY ACCOUNT')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('tab-home'));
+    expect(
+      await screen.findByText('Jasmine Matcha Pure Tea')
+    ).toBeOnTheScreen();
   });
 });
