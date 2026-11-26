@@ -20,6 +20,11 @@
 # Photo testIDs (drink-photo-N) are NOT exposed to iOS accessibility,
 # so scrolling/tapping uses the drink name regex instead. Button and
 # input testIDs (header-back etc.) are kept — pressables ARE exposed.
+#
+# BOTTOM TABS (since 2026-11-26): Home (menu stack), the cup tab
+# (cart, testID tab-order), Orders (testID tab-orders) and Me
+# (testID tab-me). The menu's old top-bar Cart button is gone — the
+# cart is reached through the cup tab.
 appId: com.leafhaus.app
 name: Browse flow (release) — menu, drink details, empty cart
 ---
@@ -54,8 +59,15 @@ name: Browse flow (release) — menu, drink details, empty cart
     element:
       text: ".*White Peach Oolong Tea.*"
     direction: UP
+# Tap the card by its full text, not the name regex: the name also exists
+# as the photo's accessibility label, so the regex can match the photo
+# instead of the card and the tap lands on nothing (this failed on
+# 2026-11-26 after the welcome-offer scroll). The full card string
+# matches only the card itself.
+- assertVisible:
+    text: "White Peach Oolong Tea, White Peach Oolong Tea, White peach, roasted oolong, RM 12.90"
 - tapOn:
-    text: ".*White Peach Oolong Tea.*"
+    text: "White Peach Oolong Tea, White Peach Oolong Tea, White peach, roasted oolong, RM 12.90"
 
 # Drink details, then back to the menu.
 - assertVisible:
@@ -76,8 +88,10 @@ name: Browse flow (release) — menu, drink details, empty cart
     text: ".*Jasmine Matcha Pure Tea.*"
 
 # Empty cart state (the clearState launch guarantees an empty cart).
+# The cart is the middle bottom tab (the cup): the menu's old top-bar
+# Cart button is gone, so the tab is tapped by its testID.
 - tapOn:
-    text: "Cart"
+    id: "tab-order"
 - assertVisible:
     text: ".*Your cart is empty.*"
 - takeScreenshot: cart-empty
