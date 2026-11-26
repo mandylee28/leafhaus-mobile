@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../theme';
 import { MARKETS, VOUCHERS } from '../data';
 import { useMarket } from '../market';
@@ -56,9 +57,14 @@ export default function MeScreen() {
     percent: Math.round(rate * 100),
   }));
 
+  // The top SafeAreaView keeps the profile row below the status bar /
+  // Dynamic Island on a real phone — without it the avatar and "Guest"
+  // sit at y=0 and are covered (seen on iPhone 26 Nov 2026). Menu and
+  // Header do the same for their top bars.
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <SafeAreaView edges={['top']} style={styles.topSafe}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         <View style={styles.profileRow}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>L</Text>
@@ -141,6 +147,7 @@ export default function MeScreen() {
           </Text>
         ) : null}
       </ScrollView>
+      </SafeAreaView>
 
       <Modal
         visible={sheetOpen}
@@ -197,6 +204,7 @@ export default function MeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.cream },
+  topSafe: { flex: 1, backgroundColor: COLORS.cream },
   scroll: { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
   profileRow: {

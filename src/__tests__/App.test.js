@@ -112,6 +112,26 @@ describe('App', () => {
     expect(await screen.findByText('MY ACCOUNT')).toBeOnTheScreen();
   });
 
+  // Regression: the cup tab must not hide the other tabs' labels.
+  // Bottom-tabs v6 reads tabBarShowLabel from the FOCUSED tab and applies
+  // it to every tab, so tabBarShowLabel: false on the cup hid Home,
+  // Orders and Me whenever the cup was focused (seen on a real phone
+  // 26 Nov 2026). The cup hides only its own label via tabBarLabel.
+  test('tapping the cup tab keeps the other tabs labels visible', async () => {
+    render(<App />);
+    await screen.findByText(/Leafhaus/);
+    expect(screen.getByText('Home')).toBeOnTheScreen();
+    expect(screen.getByText('Orders')).toBeOnTheScreen();
+    expect(screen.getByText('Me')).toBeOnTheScreen();
+    expect(screen.queryByText('Order')).not.toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('tab-order'));
+    expect(await screen.findByText('Your cart is empty.')).toBeOnTheScreen();
+    expect(screen.getByText('Home')).toBeOnTheScreen();
+    expect(screen.getByText('Orders')).toBeOnTheScreen();
+    expect(screen.getByText('Me')).toBeOnTheScreen();
+    expect(screen.queryByText('Order')).not.toBeOnTheScreen();
+  });
+
   // Tapping Home again returns to the menu.
   test('tapping Home returns to the menu', async () => {
     render(<App />);

@@ -56,7 +56,13 @@ function OrdersStackScreens() {
 }
 
 // The middle tab is the cup: the order in progress. It sits in a raised
-// deep-green circle, gold while it is the active tab.
+// deep-green circle, gold while it is the active tab, and it has no label
+// under it. The label is hidden with tabBarLabel: () => null, NOT with
+// tabBarShowLabel: false — in @react-navigation/bottom-tabs v6 the
+// showLabel flag is read from the FOCUSED tab's options and applied to
+// every tab, so tabBarShowLabel: false on the cup hid Home, Orders and
+// Me as well whenever the cup was focused (seen on a real phone 26 Nov
+// 2026). tabBarLabel: () => null hides only the cup's own label.
 function CupIcon({ focused }) {
   return (
     <View
@@ -110,7 +116,7 @@ export default function App() {
                 component={OrderStackScreens}
                 options={{
                   tabBarTestID: 'tab-order',
-                  tabBarShowLabel: false,
+                  tabBarLabel: () => null,
                   tabBarIcon: ({ focused }) => <CupIcon focused={focused} />,
                 }}
               />
