@@ -66,7 +66,12 @@ jest.mock('react-native-screens', () => {
 });
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+} from '@testing-library/react-native';
 import App from '../../App';
 
 describe('App', () => {
@@ -141,5 +146,37 @@ describe('App', () => {
     expect(
       await screen.findByText('Jasmine Matcha Pure Tea')
     ).toBeOnTheScreen();
+  });
+
+  // The floating gift button sits above the tab bar; tapping it opens
+  // the Me screen, where the vouchers live under My Benefits.
+  test('the floating gift button opens the Me screen', async () => {
+    render(<App />);
+    expect(screen.getByTestId('floating-gift')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('floating-gift'));
+    expect(await screen.findByText('MY ACCOUNT')).toBeOnTheScreen();
+  });
+
+  // The cup has no count bubble while the cart is empty.
+  test('the cup shows no count bubble when the cart is empty', async () => {
+    render(<App />);
+    await screen.findByText(/Leafhaus/);
+    expect(screen.queryByTestId('cup-bubble')).not.toBeOnTheScreen();
+  });
+
+  // Adding a drink shows its count in the cup bubble.
+  // Bottom-tabs renders each tab icon twice (active + inactive, cross-
+  // faded), so the bubble is in the tree twice — on a real phone the
+  // two copies sit exactly on top of each other and read as one.
+  test('the cup bubble shows the cart count after adding a drink', async () => {
+    render(<App />);
+    fireEvent.press(await screen.findByText('Jasmine Matcha Pure Tea'));
+    fireEvent.press(await screen.findByText('Add to Cart · RM 11.90'));
+    expect(await screen.findByText('Your Cart')).toBeOnTheScreen();
+    const bubbles = screen.getAllByTestId('cup-bubble');
+    expect(bubbles).toHaveLength(2);
+    bubbles.forEach((bubble) => {
+      expect(within(bubble).getByText('1')).toBeOnTheScreen();
+    });
   });
 });
